@@ -8,7 +8,6 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\..\Core\ERP.Core\ERP.Core.csproj" />
-      <ProjectReference Include="..\..\Shared\ERP.Shared.Events\ERP.Shared.Events.csproj" />
     </ItemGroup>
 
 </Project>

@@ -1,8 +1,8 @@
 using ERP.Core.Uow;
 using ERP.Finance.Domain.AccountsPayable.Aggregates;
+using ERP.Finance.Domain.Shared.ValueObjects;
 using MediatR;
-
-using ERP.Finance.Domain.AccountsPayable.Events;
+using ERP.Shared.Events.Events;
 
 namespace ERP.Finance.Application.AccountsPayable.EventHandlers;
 
@@ -18,7 +18,7 @@ public class BatchInvoicePaymentEventHandler(IVendorInvoiceRepository invoiceRep
         {
             // The AP Control Account ID is retrieved from the invoice itself
             invoice.RecordPayment(
-                notification.PaymentAmount,
+                new Money(notification.PaymentAmount, notification.PaymentAmountCurrency),
                 notification.TransactionReference,
                 notification.PaymentDate,
                 notification.PaymentAccountId,

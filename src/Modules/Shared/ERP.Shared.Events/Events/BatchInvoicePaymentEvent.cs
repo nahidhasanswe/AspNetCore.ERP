@@ -1,11 +1,11 @@
 using ERP.Core.Events;
-using ERP.Finance.Domain.Shared.ValueObjects;
 
-namespace ERP.Finance.Domain.AccountsPayable.Events;
+namespace ERP.Shared.Events.Events;
 
 public record BatchInvoicePaymentEvent(
     Guid InvoiceId,
-    Money PaymentAmount,
+    decimal PaymentAmount,
+    string PaymentAmountCurrency,
     string TransactionReference,
     DateTime PaymentDate,
     Guid PaymentAccountId

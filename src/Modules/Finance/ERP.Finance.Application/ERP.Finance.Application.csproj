@@ -27,6 +27,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\..\Core\ERP.Core.AutoMapper\ERP.Core.AutoMapper.csproj" />
+      <ProjectReference Include="..\..\Shared\ERP.Shared.Events\ERP.Shared.Events.csproj" />
       <ProjectReference Include="..\ERP.Finance.Infrastructure\ERP.Finance.Infrastructure.csproj" />
     </ItemGroup>
 

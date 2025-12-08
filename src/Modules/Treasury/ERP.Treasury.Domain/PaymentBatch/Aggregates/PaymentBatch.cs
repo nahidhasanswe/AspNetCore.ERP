@@ -1,70 +1,66 @@
 using ERP.Core.Aggregates;
 using ERP.Core.Exceptions;
+using ERP.Shared.Events.Events;
 using ERP.Treasury.Domain.PaymentBatch.Enums;
 using ERP.Treasury.Domain.Shared.ValueObjects;
+using InvoiceStatus = ERP.Shared.Events.Enums.InvoiceStatus;
 
 namespace ERP.Treasury.Domain.PaymentBatch.Aggregates;
 
+
 public class PaymentBatch : AggregateRoot
 {
-    public string BatchReference { get; private set; }
     public DateTime CreationDate { get; private set; }
     public PaymentBatchStatus Status { get; private set; }
-    public decimal TotalAmount { get; private set; }
-    public string Currency { get; private set; }
-    public string PaymentMethodCode { get; private set; }
-    
-    private readonly List<PaymentBatchItem> _items = new();
-    public IReadOnlyCollection<PaymentBatchItem> Items => _items.AsReadOnly();
+    public Guid PaymentAccountId { get; private set; }
+    public Money TotalAmount => new(_lines.Sum(l => l.PaymentAmount.Amount), _lines.FirstOrDefault()?.PaymentAmount.Currency ?? "USD");
+
+    private readonly List<PaymentBatchLine> _lines = new();
+    public IReadOnlyCollection<PaymentBatchLine> Lines => _lines.AsReadOnly();
 
     private PaymentBatch() { }
-    
-    public PaymentBatch(string reference, string currency, string methodCode) : base(Guid.NewGuid())
+
+    public PaymentBatch(Guid paymentAccountId) : base(Guid.NewGuid())
     {
-        BatchReference = reference;
+        PaymentAccountId = paymentAccountId;
         CreationDate = DateTime.UtcNow;
-        Currency = currency;
-        PaymentMethodCode = methodCode;
         Status = PaymentBatchStatus.Open;
-        TotalAmount = 0m;
     }
 
-    public void AddInvoice(Guid invoiceId, Money amount)
+    public void AddInvoice(Guid invoiceId, Money outstandingBalance, InvoiceStatus invoiceStatus)
     {
         if (Status != PaymentBatchStatus.Open)
-            throw new DomainException("Cannot add invoices to a closed or executed batch.");
-        if (amount.Currency != this.Currency)
-            throw new DomainException($"Cannot mix currencies in batch {BatchReference}. Expected {Currency}.");
-        
-        _items.Add(new PaymentBatchItem(invoiceId, amount));
-        TotalAmount += amount.Amount;
-    }
-    
-    public void SubmitForExecution()
-    {
-        if (Status != PaymentBatchStatus.Open)
-            throw new DomainException("Only open batches can be submitted.");
-        if (!_items.Any())
-            throw new DomainException("Cannot submit an empty batch.");
-            
-        Status = PaymentBatchStatus.Submitted;
+            throw new DomainException("Can only add invoices to an open batch.");
+
+        if (invoiceStatus != InvoiceStatus.Approved && invoiceStatus != InvoiceStatus.ScheduledForPayment)
+            throw new DomainException("Invoice must be approved or scheduled for payment.");
+
+        if (_lines.Any(l => l.InvoiceId == invoiceId)) return;
+
+        _lines.Add(new PaymentBatchLine(Id, invoiceId, outstandingBalance));
     }
 
-    public void MarkExecuted(string bankFileReference)
+    public void Execute(string transactionReference)
     {
-        if (Status != PaymentBatchStatus.Submitted)
-            throw new DomainException("Only submitted batches can be executed.");
-            
-        Status = PaymentBatchStatus.Executed;
-        
-        // Raise event to trigger GL posting for the entire batch amount
-        // AddDomainEvent(new PaymentBatchExecutedEvent(
-        //     Id, 
-        //     BatchReference, 
-        //     new Money(TotalAmount, Currency),
-        //     PaymentMethodCode,
-        //     bankFileReference,
-        //     Items.Select(i => i.InvoiceId).ToList()
-        // ));
+        if (Status != PaymentBatchStatus.Open)
+            throw new DomainException("Can only execute an open payment batch.");
+        if (!_lines.Any())
+            throw new DomainException("Cannot execute an empty payment batch.");
+
+        Status = PaymentBatchStatus.Processing;
+
+        foreach (var line in _lines)
+        {
+            AddDomainEvent(new BatchInvoicePaymentEvent(
+                line.InvoiceId,
+                line.PaymentAmount.Amount, // Use the line's payment amount
+                line.PaymentAmount.Currency,
+                transactionReference,
+                DateTime.UtcNow,
+                PaymentAccountId
+            ));
+        }
+
+        Status = PaymentBatchStatus.Completed;
     }
 }

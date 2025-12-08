@@ -1,3 +1,9 @@
 namespace ERP.Treasury.Domain.PaymentBatch.Enums;
 
-public enum PaymentBatchStatus { Open, Submitted, Executed, Failed }
+public enum PaymentBatchStatus
+{
+    Open,
+    Processing,
+    Completed,
+    Failed
+}

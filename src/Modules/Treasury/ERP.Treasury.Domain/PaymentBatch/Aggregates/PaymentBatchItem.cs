@@ -3,20 +3,23 @@ using ERP.Treasury.Domain.Shared.ValueObjects;
 
 namespace ERP.Treasury.Domain.PaymentBatch.Aggregates;
 
-public class PaymentBatchItem : ValueObject
+public class PaymentBatchLine : ValueObject
 {
+    public Guid BatchId { get; private set; }
     public Guid InvoiceId { get; private set; }
-    public Money Amount { get; private set; }
-    
-    public PaymentBatchItem(Guid invoiceId, Money amount)
-    {
-        InvoiceId = invoiceId;
-        Amount = amount;
-    }
+    public Money PaymentAmount { get; private set; }
 
+    public PaymentBatchLine(Guid batchId, Guid invoiceId, Money paymentAmount)
+    {
+        BatchId = batchId;
+        InvoiceId = invoiceId;
+        PaymentAmount = paymentAmount;
+    }
+    
     protected override IEnumerable<object> GetEqualityComponents()
     {
-        yield return Amount;
+        yield return BatchId;
         yield return InvoiceId;
+        yield return PaymentAmount;
     }
 }
