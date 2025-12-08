@@ -1,5 +1,6 @@
 using ERP.Core.Behaviors;
-using ERP.Finance.Domain.AccountsPayable.ValueObjects;
+using ERP.Finance.Application.AccountsPayable.DTOs;
+using ERP.Finance.Domain.Shared.DTOs;
 
 namespace ERP.Finance.Application.AccountsPayable.Commands.CreateVendor;
 
@@ -7,9 +8,9 @@ public class CreateVendorCommand : IRequestCommand<Guid>
 {
     public string Name { get; set; }
     public string TaxId { get; set; }
-    public Address Address { get; set; }
-    public ContactInfo ContactInfo { get; set; }
+    public AddressDto Address { get; set; }
+    public ContactInfoDto ContactInfo { get; set; }
     public string PaymentTerms { get; set; }
     public string DefaultCurrency { get; set; }
-    public VendorBankDetails BankDetails { get; set; }
+    public VendorBankDetailsDto BankDetails { get; set; }
 }

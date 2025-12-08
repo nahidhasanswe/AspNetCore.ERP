@@ -29,7 +29,7 @@ public class CreateVendorInvoiceCommandHandler(
         var apControlAccountId = Guid.NewGuid();
         
         // 1. Create the Aggregate Root
-        var invoice = VendorInvoice.Create(
+        var invoice = VendorInvoice.CreateNonPOInvoice(
             command.VendorId, 
             command.InvoiceNumber, 
             command.InvoiceDate,

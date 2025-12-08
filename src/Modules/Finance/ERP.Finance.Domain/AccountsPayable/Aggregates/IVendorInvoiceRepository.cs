@@ -5,8 +5,7 @@ namespace ERP.Finance.Domain.AccountsPayable.Aggregates;
 
 public interface IVendorInvoiceRepository : IRepository<VendorInvoice>
 {
-    Task<IEnumerable<VendorInvoice>> GetInvoicesDueForPayment(DateTime dueDate);
-    Task<IEnumerable<VendorInvoice>> ListAllUnpaidAsync();
-    Task<IEnumerable<VendorInvoice>> GetForecastProjectionAsync(DateTime dueDateCutoff);
-    Task<IEnumerable<VendorInvoice>> ListInvoicesByStatusAsync(InvoiceStatus status);
+    Task<IReadOnlyCollection<VendorInvoice>> ListAllUnpaidAsync();
+    Task<IReadOnlyCollection<VendorInvoice>> GetForecastProjectionAsync(DateTime dueDateCutoff);
+    Task<IReadOnlyCollection<VendorInvoice>> GetAllListAsync(Guid? vendorId, InvoiceStatus? status, DateTime? dueDate, CancellationToken cancellationToken);
 }

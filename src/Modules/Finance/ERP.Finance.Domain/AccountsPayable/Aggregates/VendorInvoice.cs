@@ -1,6 +1,8 @@
 using ERP.Core.Aggregates;
 using ERP.Core.Exceptions;
+using ERP.Finance.Domain.AccountsPayable.Enums;
 using ERP.Finance.Domain.AccountsPayable.Events;
+using ERP.Finance.Domain.AccountsPayable.Services;
 using ERP.Finance.Domain.Shared.Enums;
 using ERP.Finance.Domain.Shared.ValueObjects;
 
@@ -8,40 +10,34 @@ namespace ERP.Finance.Domain.AccountsPayable.Aggregates;
 
 public class VendorInvoice : AggregateRoot
 {
+    // ... (existing properties)
     public Guid VendorId { get; private set; }
     public DateTime InvoiceDate { get; private set; }
     public DateTime DueDate { get; private set; }
     public Money TotalAmount { get; private set; }
     public InvoiceStatus Status { get; private set; }
     public string InvoiceNumber { get; private set; }
-    
-    public Guid? CostCenterId { get; private set; }
-    
-    public bool IsOnHold { get; private set; } = false;
-    public decimal TotalPaymentsRecorded { get; private set; } 
-    
     public Guid APControlAccountId { get; private set; }
-    
-    public Money OutstandingBalance 
-    {
-        get 
-        {
-            var remaining = TotalAmount.Amount - TotalPaymentsRecorded;
-            return new Money(Math.Max(0, remaining), TotalAmount.Currency);
-        }
-    }
+    public Guid? CostCenterId { get; private set; }
+    public bool IsOnHold { get; private set; } = false;
+    public decimal TotalPaymentsRecorded { get; private set; }
+    public Guid? PurchaseOrderId { get; private set; }
+    public InvoiceMatchingStatus MatchingStatus { get; private set; }
+
+    // New property for approval tracking
+    private readonly List<Guid> _approverIds = new();
+    public IReadOnlyCollection<Guid> ApproverIds => _approverIds.AsReadOnly();
+
+    public Money OutstandingBalance => new(Math.Max(0, TotalAmount.Amount - TotalPaymentsRecorded), TotalAmount.Currency);
 
     private readonly List<InvoiceLineItem> _lineItems = new();
     public IReadOnlyCollection<InvoiceLineItem> LineItems => _lineItems.AsReadOnly();
 
     private VendorInvoice() { }
-
+    
+    // ... (constructors)
     private VendorInvoice(Guid vendorId, string invoiceNumber, DateTime invoiceDate, DateTime dueDate, Guid apControlAccountId, Guid? costCenterId, IEnumerable<InvoiceLineItem> lineItems) : base(Guid.NewGuid())
     {
-        if (string.IsNullOrWhiteSpace(invoiceNumber)) throw new ArgumentException("Invoice number is required.");
-        var items = lineItems.ToList();
-        if (!items.Any()) throw new DomainException("A vendor invoice must have at least one line item.");
-
         VendorId = vendorId;
         InvoiceNumber = invoiceNumber;
         InvoiceDate = invoiceDate;
@@ -49,30 +45,105 @@ public class VendorInvoice : AggregateRoot
         Status = InvoiceStatus.Submitted;
         APControlAccountId = apControlAccountId;
         CostCenterId = costCenterId;
-
-        TotalPaymentsRecorded = 0m;
-
-        _lineItems.AddRange(items);
+        MatchingStatus = InvoiceMatchingStatus.NotMatched; // Default for non-PO
+        _lineItems.AddRange(lineItems);
         RecalculateTotal();
     }
-
-    public static VendorInvoice Create(Guid vendorId, string invoiceNumber, DateTime invoiceDate, DateTime dueDate, Guid apControlAccountId, Guid? costCenterId, IEnumerable<InvoiceLineItem> lineItems)
+    public static VendorInvoice CreateNonPOInvoice(Guid vendorId, string invoiceNumber, DateTime invoiceDate, DateTime dueDate, Guid apControlAccountId, Guid? costCenterId, IEnumerable<InvoiceLineItem> lineItems)
     {
-        if (string.IsNullOrWhiteSpace(invoiceNumber)) 
-            throw new ArgumentException("Invoice number is required.");
-        
-        var items = lineItems.ToList();
-        if (!items.Any()) 
-            throw new DomainException("A vendor invoice must have at least one line item.");
- 
-        var invoice = new VendorInvoice(vendorId, invoiceNumber, invoiceDate, dueDate, apControlAccountId, costCenterId, items);
-         
-        // You can raise an initial creation event here if needed, similar to the one in your Approve() method.
-        // For example: invoice.AddDomainEvent(new VendorInvoiceCreatedEvent(...));
-         
-        return invoice;
+        return new VendorInvoice(vendorId, invoiceNumber, invoiceDate, dueDate, apControlAccountId, costCenterId, lineItems);
+    }
+    public static VendorInvoice CreateFromPO(Guid purchaseOrderId, string invoiceNumber, DateTime invoiceDate, DateTime dueDate, Guid apControlAccountId, IEnumerable<InvoiceLineItem> lineItems)
+    {
+        var poInvoice = new VendorInvoice
+        {
+            Id = Guid.NewGuid(),
+            PurchaseOrderId = purchaseOrderId,
+            InvoiceNumber = invoiceNumber,
+            InvoiceDate = invoiceDate,
+            DueDate = dueDate,
+            APControlAccountId = apControlAccountId,
+            Status = InvoiceStatus.Submitted,
+            MatchingStatus = InvoiceMatchingStatus.NotMatched
+        };
+        poInvoice._lineItems.AddRange(lineItems);
+        poInvoice.RecalculateTotal();
+        return poInvoice;
+    }
+
+    // Modified Approve method
+    public async Task Approve(Guid approverId, IApprovalService approvalService)
+    {
+        if (Status != InvoiceStatus.Submitted && Status != InvoiceStatus.PendingApproval)
+            throw new DomainException("Only submitted or pending approval invoices can be approved.");
+
+        if (!_approverIds.Contains(approverId))
+        {
+            _approverIds.Add(approverId);
+        }
+
+        if (await approvalService.HasSufficientApproval(this, approverId))
+        {
+            Status = InvoiceStatus.Approved;
+            AddDomainEvent(new VendorInvoiceApprovedEvent(
+                Id,
+                VendorId,
+                TotalAmount,
+                DateTime.UtcNow,
+                APControlAccountId,
+                LineItems.Select(li => new InvoiceLineItemProjection(li.LineAmount, li.ExpenseAccountId, li.Description, CostCenterId)).ToList()
+            ));
+        }
+        else
+        {
+            Status = InvoiceStatus.PendingApproval;
+        }
     }
     
+    // ... (other methods like MatchToPO, RecordPayment, etc.)
+    public void MatchToPO(PurchaseOrder po, bool perform3WayMatch)
+    {
+        if (PurchaseOrderId == null || PurchaseOrderId != po.Id)
+            throw new DomainException("This invoice is not linked to the specified purchase order.");
+
+        foreach (var invoiceLine in _lineItems)
+        {
+            var poLine = po.Lines.FirstOrDefault(l => l.Description == invoiceLine.Description); 
+            if (poLine == null) throw new DomainException($"Invoice line '{invoiceLine.Description}' not found on PO.");
+
+            if (invoiceLine.LineAmount.Amount > poLine.TotalPrice.Amount)
+                throw new DomainException("Invoice amount exceeds PO amount for line: " + invoiceLine.Description);
+        }
+        MatchingStatus = InvoiceMatchingStatus.Matched2Way;
+
+        if (perform3WayMatch)
+        {
+            foreach (var invoiceLine in _lineItems)
+            {
+                var poLine = po.Lines.First(l => l.Description == invoiceLine.Description);
+                var receivedQty = po.GetReceivedQuantity(poLine.Id);
+                
+                if (invoiceLine.LineAmount.Amount / poLine.UnitPrice.Amount > receivedQty)
+                    throw new DomainException($"Invoice quantity for '{invoiceLine.Description}' exceeds received quantity.");
+            }
+            MatchingStatus = InvoiceMatchingStatus.Matched3Way;
+        }
+    }
+
+    private void RecalculateTotal()
+    {
+        if (!_lineItems.Any())
+        {
+            TotalAmount = new Money(0, "USD");
+            return;
+        }
+        var currency = _lineItems.First().LineAmount.Currency;
+        if (_lineItems.Any(li => li.LineAmount.Currency != currency))
+        {
+            throw new DomainException("All line items must have the same currency.");
+        }
+        TotalAmount = new Money(_lineItems.Sum(li => li.LineAmount.Amount), currency);
+    }
     public void Update(DateTime newDueDate, IEnumerable<InvoiceLineItem> newLineItems)
     {
         if (Status != InvoiceStatus.Submitted)
@@ -82,12 +153,9 @@ public class VendorInvoice : AggregateRoot
         
         DueDate = newDueDate;
         
-        // Replace existing lines and recalculate
         _lineItems.Clear();
         _lineItems.AddRange(newLineItems);
         RecalculateTotal();
-        
-        // Domain Event could be raised here for auditing/integration: InvoiceDetailsUpdatedEvent
     }
 
     public void AddLineItem(string description, Money lineAmount, Guid expenseAccountId, Guid? costCenterId)
@@ -100,48 +168,6 @@ public class VendorInvoice : AggregateRoot
         _lineItems.Add(lineItem);
         RecalculateTotal();
     }
-
-    private void RecalculateTotal()
-    {
-        if (!_lineItems.Any())
-        {
-            TotalAmount = new Money(0, "USD"); // Default currency, consider making this configurable
-            return;
-        }
-
-        var currency = _lineItems.First().LineAmount.Currency;
-        if (_lineItems.Any(li => li.LineAmount.Currency != currency))
-        {
-            throw new DomainException("All line items must have the same currency.");
-        }
-
-        TotalAmount = new Money(_lineItems.Sum(li => li.LineAmount.Amount), currency);
-    }
-
-    public void Approve()
-    {
-        if (Status != InvoiceStatus.Submitted)
-            throw new DomainException("Only submitted invoices can be approved.");
-        if (TotalAmount.Amount <= 0)
-            throw new DomainException("Cannot approve an invoice with a zero or negative total amount.");
-        
-        Status = InvoiceStatus.Approved;
-        
-        AddDomainEvent(new VendorInvoiceApprovedEvent(
-            Id,
-            VendorId,
-            TotalAmount,
-            DateTime.UtcNow,
-            LineItems: LineItems.Select(li => new 
-                InvoiceLineItemProjection(
-                li.LineAmount,
-                li.ExpenseAccountId,
-                li.Description,
-                this.CostCenterId
-            )).ToList()
-        ));
-    }
-
     public void SchedulePayment()
     {
         if (Status != InvoiceStatus.Approved)
@@ -158,31 +184,26 @@ public class VendorInvoice : AggregateRoot
         if (paymentAmount.Currency != TotalAmount.Currency)
             throw new DomainException("Payment currency must match invoice currency.");
     
-        // Check if payment exceeds remaining balance
         if (paymentAmount.Amount > OutstandingBalance.Amount)
             throw new DomainException($"Payment amount {paymentAmount.Amount} exceeds outstanding balance {OutstandingBalance.Amount}.");
 
-        // Update internal state
         TotalPaymentsRecorded += paymentAmount.Amount;
 
-        // Raise a specific event to trigger the GL posting (Debit AP Control, Credit Cash/Bank)
         AddDomainEvent(new VendorPaymentRecordedEvent(
             Id,
             VendorId,
             paymentAmount,
             transactionReference,
             paymentDate,
-            paymentAccountId, // GL account the cash came from
+            paymentAccountId,
             apControlAccountId,
             this.CostCenterId
         ));
 
-        // Update status if fully paid
         if (OutstandingBalance.Amount == 0)
         {
             Status = InvoiceStatus.Paid;
         }
-        // If partially paid, status should remain ScheduledForPayment or Approved
     }
     
     public void Cancel(string reason)
@@ -191,7 +212,7 @@ public class VendorInvoice : AggregateRoot
         {
             throw new DomainException("Cannot cancel an invoice with recorded payments.");
         }
-        if (Status == InvoiceStatus.Cancel) return; // Idempotency
+        if (Status == InvoiceStatus.Cancel) return;
         
         var lineProjections = LineItems.Select(li => new 
             InvoiceLineItemProjection(
@@ -203,7 +224,6 @@ public class VendorInvoice : AggregateRoot
         
         Status = InvoiceStatus.Cancel;
         
-        // Raise event to reverse any posted GL entry (Requires a reversing GL handler)
         AddDomainEvent(new VendorInvoiceCancelledEvent(
                 this.Id, 
                 this.VendorId, 

@@ -1,5 +1,7 @@
 using ERP.Core.Events;
 using ERP.Finance.Domain.Shared.ValueObjects;
+using System;
+using System.Collections.Generic;
 
 namespace ERP.Finance.Domain.AccountsPayable.Events;
 
@@ -8,8 +10,8 @@ public record VendorInvoiceApprovedEvent(
     Guid VendorId,
     Money TotalAmount,
     DateTime ApprovalDate,
-    // CRITICAL: We need a projection of the lines with the GL account for posting
-    IEnumerable<InvoiceLineItemProjection> LineItems 
+    Guid APControlAccountId, // Added this
+    IEnumerable<InvoiceLineItemProjection> LineItems
 ) : IDomainEvent
 {
     public DateTime OccurredOn { get; } = DateTime.UtcNow;
