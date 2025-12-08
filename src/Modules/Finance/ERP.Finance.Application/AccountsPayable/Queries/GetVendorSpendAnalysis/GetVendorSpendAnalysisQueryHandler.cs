@@ -1,20 +1,17 @@
 using ERP.Core;
 using ERP.Finance.Application.AccountsPayable.DTOs;
 using ERP.Finance.Domain.AccountsPayable.Aggregates;
+using ERP.Finance.Domain.GeneralLedger.Aggregates;
 using MediatR;
 
 namespace ERP.Finance.Application.AccountsPayable.Queries.GetVendorSpendAnalysis;
 
 public class GetVendorSpendAnalysisQueryHandler(
     IVendorInvoiceRepository invoiceRepository,
-    IVendorRepository vendorRepository)
+    IVendorRepository vendorRepository,
+    IAccountRepository accountRepository)
     : IRequestHandler<GetVendorSpendAnalysisQuery, Result<IEnumerable<VendorSpendAnalysisDto>>>
 {
-    // private readonly IGLAccountRepository _glAccountRepository; // Assuming a GL account repository exists
-
-    /*, IGLAccountRepository glAccountRepository */
-    // _glAccountRepository = glAccountRepository;
-
     public async Task<Result<IEnumerable<VendorSpendAnalysisDto>>> Handle(GetVendorSpendAnalysisQuery request, CancellationToken cancellationToken)
     {
         var filteredInvoices = await invoiceRepository.GetAllListAsync(request.VendorId, null, null, request.StartDate, request.EndDate, cancellationToken);
@@ -38,13 +35,13 @@ public class GetVendorSpendAnalysisQueryHandler(
         foreach (var item in groupedSpend)
         {
             var vendorName = await vendorRepository.GetNameByIdAsync(item.VendorId);
-            // var expenseAccountName = await _glAccountRepository.GetAccountNameByIdAsync(item.ExpenseAccountId); // Placeholder
+            var expenseAccountName = await accountRepository.GetAccountNameAsync(item.ExpenseAccountId, cancellationToken);
 
             spendData.Add(new VendorSpendAnalysisDto(
                 item.VendorId,
                 vendorName ?? "Unknown Vendor",
                 item.ExpenseAccountId,
-                "Unknown Expense Account", // Placeholder
+                expenseAccountName ?? "Unknown Expense Account",
                 item.TotalSpend,
                 item.Currency
             ));
