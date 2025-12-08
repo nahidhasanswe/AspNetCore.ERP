@@ -4,5 +4,5 @@ namespace ERP.Finance.Domain.AccountsPayable.Aggregates;
 
 public interface IVendorOnboardingRequestRepository : IRepository<VendorOnboardingRequest>
 {
-    // Add any specific query methods needed for onboarding requests
+    Task<IReadOnlyCollection<VendorOnboardingRequest>> GetAllAsync(OnboardingStatus? status, CancellationToken cancellationToken = default);
 }

@@ -1,7 +1,6 @@
 using ERP.Core.Aggregates;
 using ERP.Core.Exceptions;
 using ERP.Finance.Domain.AccountsPayable.ValueObjects;
-using System;
 
 namespace ERP.Finance.Domain.AccountsPayable.Aggregates;
 
@@ -26,6 +25,8 @@ public class VendorOnboardingRequest : AggregateRoot
     public OnboardingStatus Status { get; private set; }
     public string RejectionReason { get; private set; }
     public Guid? ApprovedVendorId { get; private set; }
+    
+    public DateTime CreatedDate { get; private set; }
 
     private VendorOnboardingRequest() { }
 
@@ -46,6 +47,7 @@ public class VendorOnboardingRequest : AggregateRoot
         ProposedDefaultCurrency = proposedDefaultCurrency;
         ProposedBankDetails = proposedBankDetails;
         Status = OnboardingStatus.Submitted;
+        CreatedDate = DateTime.UtcNow;
     }
 
     public void SubmitForApproval()
