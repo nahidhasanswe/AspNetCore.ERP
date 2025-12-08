@@ -1,4 +1,3 @@
-using ERP.Core;
 using ERP.Core.Aggregates;
 using ERP.Core.Exceptions;
 using ERP.Finance.Domain.FiscalYear.Enums;
@@ -12,35 +11,51 @@ public class FiscalPeriod : AggregateRoot
     public DateTime EndDate { get; private set; }
     public PeriodStatus Status { get; private set; }
 
-    private FiscalPeriod() {}
+    private FiscalPeriod() { }
 
-    public FiscalPeriod(string name, DateTime startDate, DateTime endDate)
+    public FiscalPeriod(string name, DateTime startDate, DateTime endDate) : base(Guid.NewGuid())
     {
         Name = name;
         StartDate = startDate;
         EndDate = endDate;
+        Status = PeriodStatus.NeverOpened;
+    }
+
+    public void Open()
+    {
+        if (Status != PeriodStatus.NeverOpened)
+            throw new DomainException("Period has already been opened or closed.");
         Status = PeriodStatus.Open;
     }
 
-    public Result Close(PeriodStatus newStatus) 
+    public void SoftClose()
     {
-        if (newStatus == PeriodStatus.Open) 
-            throw new DomainException("Cannot close to Open status.");
-        if (Status == PeriodStatus.HardClose) 
-            throw new DomainException("Cannot modify a hard-closed period.");
-        
-        Status = newStatus;
-        // Optionally raise a Domain Event: PeriodStatusChangedEvent
-        
-        return Result.Success();
+        if (Status != PeriodStatus.Open)
+            throw new DomainException("Can only soft-close an open period.");
+        Status = PeriodStatus.SoftClose;
     }
-    
-    public Result Reopen()
+
+    public void HardClose()
+    {
+        if (Status != PeriodStatus.SoftClose)
+            throw new DomainException("Can only hard-close a soft-closed period.");
+        Status = PeriodStatus.HardClose;
+    }
+
+    public void Reopen()
     {
         if (Status == PeriodStatus.HardClose) 
             throw new DomainException("Hard-closed periods cannot be reopened.");
         Status = PeriodStatus.Open;
-        
-        return Result.Success();
+    }
+
+    public void PostClosingEntry()
+    {
+        if (Status != PeriodStatus.SoftClose)
+        {
+            throw new DomainException("A closing entry can only be posted to a soft-closed period.");
+        }
+        // This method conceptually allows a 'closing' post and immediately hard-closes the period.
+        Status = PeriodStatus.HardClose;
     }
 }

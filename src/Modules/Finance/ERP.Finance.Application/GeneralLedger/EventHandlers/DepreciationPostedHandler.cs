@@ -1,21 +1,32 @@
 using ERP.Core.Uow;
 using ERP.Finance.Domain.FixedAssetManagement.Events;
+using ERP.Finance.Domain.FiscalYear.Aggregates;
 using ERP.Finance.Domain.GeneralLedger.Aggregates;
+using ERP.Finance.Domain.GeneralLedger.Services;
 using ERP.Finance.Domain.Shared.Currency;
 using MediatR;
 
 namespace ERP.Finance.Application.GeneralLedger.EventHandlers;
 
 public class DepreciationPostedHandler(
-    IJournalEntryRepository glRepository,
+    IJournalEntryRepository journalEntryRepository,
     IUnitOfWorkManager unitOfWork,
-    ICurrencyConversionService currencyConverter
+    ICurrencyConversionService currencyConverter,
+    IFiscalPeriodRepository fiscalPeriodRepository,
+    IAccountValidationService accountValidator
     ) : INotificationHandler<DepreciationPostedEvent>
 {
     private const string SystemBaseCurrency = "USD";
     
     public async Task Handle(DepreciationPostedEvent notification, CancellationToken cancellationToken)
     {
+        var fiscalPeriod = await fiscalPeriodRepository.GetPeriodByDateAsync(notification.OccurredOn, cancellationToken);
+        if (fiscalPeriod is null)
+        {
+            // Log error: Cannot post depreciation as no open fiscal period was found.
+            return;
+        }
+
         var entry = new JournalEntry(
             $"Monthly Depreciation for Asset {notification.AssetId}", 
             $"DEP-{notification.PeriodDate.Year}-{notification.PeriodDate.Month}"
@@ -53,11 +64,11 @@ public class DepreciationPostedHandler(
         entry.AddLine(creditLine);
 
         // Core Invariant Check
-        entry.Post();
+        entry.Post(fiscalPeriod, accountValidator);
 
         using var scope = unitOfWork.Begin();
 
-        await glRepository.AddAsync(entry, cancellationToken);
+        await journalEntryRepository.AddAsync(entry, cancellationToken);
         await scope.SaveChangesAsync(cancellationToken);
     }
 }

@@ -13,7 +13,21 @@ public class CreateAccountHandler(
 
     public async Task<Result<Guid>> Handle(CreateAccountCommand command, CancellationToken cancellationToken)
     {
-        var entry = new Account(command.AccountCode, command.Name, command.Type.ToString());
+        // Add validation to prevent duplicate account codes.
+        var existingAccount = await repository.GetByCodeAsync(command.AccountCode, cancellationToken);
+        if (existingAccount is not null)
+        {
+            return Result.Failure<Guid>($"An account with code '{command.AccountCode}' already exists.");
+        }
+
+        // The Account constructor now accepts the AccountType enum directly,
+        // along with optional parameters for hierarchy and summary flags.
+        var entry = new Account(
+            command.AccountCode, 
+            command.Name, 
+            command.Type, // Pass the enum directly
+            command.ParentId, 
+            command.IsSummary);
 
         using var scope = unitOfWork.Begin();
         await repository.AddAsync(entry, cancellationToken);

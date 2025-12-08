@@ -20,8 +20,8 @@ public class GetVendorByIdQueryHandler(IVendorRepository repository)
             vendor.Name,
             vendor.TaxId,
             vendor.PaymentTerms,
-            vendor.ContactEmail,
-            vendor.ContactPhone
+            vendor.ContactInfo.Email,
+            vendor.ContactInfo.Phone
         ));
     }
 }

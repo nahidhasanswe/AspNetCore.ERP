@@ -1,7 +1,8 @@
 using ERP.Core;
 using ERP.Core.Uow;
-using ERP.Finance.Domain.FiscalYear.Service;
+using ERP.Finance.Domain.FiscalYear.Aggregates;
 using ERP.Finance.Domain.GeneralLedger.Aggregates;
+using ERP.Finance.Domain.GeneralLedger.Services;
 using ERP.Finance.Domain.Shared.Currency;
 using ERP.Finance.Domain.Shared.ValueObjects;
 using MediatR;
@@ -11,8 +12,9 @@ namespace ERP.Finance.Application.GeneralLedger.Commands.CreateJournal;
 public class CreateJournalEntryCommandHandler(
         IJournalEntryRepository repository,
         IUnitOfWorkManager unitOfWork,
-        ICurrencyConversionService currencyConverter, 
-        IFiscalPeriodCheckService periodChecker
+        ICurrencyConversionService currencyConverter,
+        IFiscalPeriodRepository fiscalPeriodRepository,
+        IAccountValidationService accountValidator
     ) : IRequestHandler<CreateJournalEntryCommand, Result<Guid>>
 {
     
@@ -20,9 +22,13 @@ public class CreateJournalEntryCommandHandler(
 
     public async Task<Result<Guid>> Handle(CreateJournalEntryCommand command, CancellationToken cancellationToken)
     {
-        // CRITICAL 1: Check Fiscal Period BEFORE creating the entry (Fail fast)
-        await periodChecker.EnsurePeriodIsOpenForPosting(command.PostingDate); // Assuming command has PostingDate
+        // Check Fiscal Period BEFORE creating the entry (Fail fast)
+        // We now fetch the period to pass it to the Post method.
+        var fiscalPeriod = await fiscalPeriodRepository.GetPeriodByDateAsync(command.PostingDate, cancellationToken);
 
+        if (fiscalPeriod is null)
+            return Result.Failure<Guid>($"No fiscal period found for date {command.PostingDate.ToShortDateString()}. The Post method will validate if it is open.");
+        
         // 1. Create the Aggregate Root
         var entry = new JournalEntry(command.Description, command.ReferenceNumber);
     
@@ -38,32 +44,28 @@ public class CreateJournalEntryCommandHandler(
                 conversionDate: command.PostingDate // Use the transaction date for rate
             );
 
-            // CRITICAL 3: Incorporate ALL new LedgerLine constructor parameters
+            // Incorporate ALL new LedgerLine constructor parameters
             var line = new LedgerLine(
-                // 1. JournalEntryId: Set here (essential for EF Core mapping)
                 entry.Id, 
-                // 2. AccountId, Amount, IsDebit, Description (existing)
                 lineDto.AccountId, 
                 transactionAmount, 
-                // 3. BaseAmount (NEW)
                 baseAmount, 
                 lineDto.IsDebit, 
-                command.Description, // Can use lineDto.Description if provided
-                // 4. CostCenterId (NEW)
+                command.Description, // Prefer line-specific description, fallback to header
                 lineDto.CostCenterId 
             );
         
             entry.AddLine(line);
         }
 
-        // 3. Execute the Core Domain Logic (Invariants Check)
-        entry.Post(); // This checks that Debits == Credits for both Amount and BaseAmount.
+        // Execute the Core Domain Logic (Invariants Check)
+        // The Post method now requires the fiscal period and an account validator.
+        entry.Post(fiscalPeriod, accountValidator); 
 
         using var scope = unitOfWork.Begin();
 
-        // 4. Persist the Aggregate State
+        // Persist the Aggregate State
         await repository.AddAsync(entry, cancellationToken);
-
         await scope.SaveChangesAsync(cancellationToken);
 
         return Result.Success(entry.Id);

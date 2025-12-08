@@ -1,5 +1,7 @@
 using ERP.Core.Uow;
+using ERP.Finance.Domain.FiscalYear.Aggregates;
 using ERP.Finance.Domain.GeneralLedger.Aggregates;
+using ERP.Finance.Domain.GeneralLedger.Services;
 using ERP.Finance.Domain.Shared.Currency;
 using ERP.Finance.Domain.TaxManagement.Events;
 using MediatR;
@@ -7,15 +9,24 @@ using MediatR;
 namespace ERP.Finance.Application.GeneralLedger.EventHandlers;
 
 public class TaxCalculatedHandler(
-    IJournalEntryRepository glRepository,
+    IJournalEntryRepository journalEntryRepository,
     IUnitOfWorkManager unitOfWork,
-    ICurrencyConversionService currencyConverter
+    ICurrencyConversionService currencyConverter,
+    IFiscalPeriodRepository fiscalPeriodRepository,
+    IAccountValidationService accountValidator
     ) : INotificationHandler<TaxCalculatedEvent>
 {
     private const string SystemBaseCurrency = "USD";
 
     public async Task Handle(TaxCalculatedEvent notification, CancellationToken cancellationToken)
     {
+        var fiscalPeriod = await fiscalPeriodRepository.GetPeriodByDateAsync(notification.OccurredOn, cancellationToken);
+        if (fiscalPeriod is null)
+        {
+            // Log error: Cannot post tax GL as no open fiscal period was found.
+            return;
+        }
+
         var taxAmount = notification.TaxAmount;
         var payableAccountId = notification.TaxPayableAccountId;
 
@@ -104,11 +115,11 @@ public class TaxCalculatedHandler(
             ));
         }
 
-        entry.Post();
+        entry.Post(fiscalPeriod, accountValidator);
 
         using var scope = unitOfWork.Begin();
         
-        await glRepository.AddAsync(entry, cancellationToken);
+        await journalEntryRepository.AddAsync(entry, cancellationToken);
         await scope.SaveChangesAsync(cancellationToken);
     }
 }

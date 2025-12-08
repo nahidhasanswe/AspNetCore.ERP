@@ -1,6 +1,8 @@
 using ERP.Core.Uow;
 using ERP.Finance.Domain.AccountsPayable.Events;
+using ERP.Finance.Domain.FiscalYear.Aggregates;
 using ERP.Finance.Domain.GeneralLedger.Aggregates;
+using ERP.Finance.Domain.GeneralLedger.Services;
 using ERP.Finance.Domain.Shared.Currency;
 using ERP.Finance.Domain.Shared.ValueObjects;
 using MediatR;
@@ -8,15 +10,24 @@ using MediatR;
 namespace ERP.Finance.Application.GeneralLedger.EventHandlers;
 
 public class VendorInvoicePaidHandler(
-        IJournalEntryRepository glRepository,
+        IJournalEntryRepository journalEntryRepository,
         IUnitOfWorkManager unitOfWork,
-        ICurrencyConversionService currencyConverter
+        ICurrencyConversionService currencyConverter,
+        IFiscalPeriodRepository fiscalPeriodRepository,
+        IAccountValidationService accountValidator
     ) : INotificationHandler<VendorPaymentRecordedEvent>
 {
     private const string SystemBaseCurrency = "USD";
     
     public async Task Handle(VendorPaymentRecordedEvent notification, CancellationToken cancellationToken)
     {
+        var fiscalPeriod = await fiscalPeriodRepository.GetPeriodByDateAsync(notification.OccurredOn, cancellationToken);
+        if (fiscalPeriod is null)
+        {
+            // Log error: Cannot post vendor payment GL as no open fiscal period was found.
+            return;
+        }
+
         // 1. Create the GL Aggregate Root
         var entry = new JournalEntry(
             $"Payment for Vendor Invoice {notification.InvoiceId}", 
@@ -59,16 +70,10 @@ public class VendorInvoicePaidHandler(
         entry.AddLine(creditLine);
 
         // 5. Post the entry, ensuring the balance invariant is maintained
-        entry.Post();
+        entry.Post(fiscalPeriod, accountValidator);
 
         using var scope = unitOfWork.Begin();
-        
-        // IMPORTANT: The LedgerLine constructor now requires BaseAmount for currency consistency,
-        // so you must inject ICurrencyConversionService here and calculate the BaseAmount
-        // before adding LedgerLines, if the payment is in a foreign currency. 
-        // For simplicity, we omit that complexity here.
-
-        await glRepository.AddAsync(entry, cancellationToken);
+        await journalEntryRepository.AddAsync(entry, cancellationToken);
         await scope.SaveChangesAsync(cancellationToken);
     }
 }

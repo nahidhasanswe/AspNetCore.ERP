@@ -1,6 +1,9 @@
 
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{9A75FCFA-6DC1-4DF3-8168-48CC073E2765}"
+	ProjectSection(SolutionItems) = preProject
+		src\Progress.md = src\Progress.md
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{47CB401A-FD83-48B0-9408-985F9ACA7163}"
 EndProject

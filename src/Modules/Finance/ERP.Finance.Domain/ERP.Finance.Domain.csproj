@@ -17,10 +17,13 @@
       <Folder Include="FixedAssetManagement\DTOs\" />
       <Folder Include="FixedAssetManagement\Service\" />
       <Folder Include="FixedAssetManagement\Specifications\" />
-      <Folder Include="GeneralLedger\DTOs\" />
+      <Folder Include="GeneralLedger\Entities\" />
       <Folder Include="GeneralLedger\Specifications\" />
-      <Folder Include="Shared\DTOs\" />
       <Folder Include="TaxManagement\Specifications\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Remove="AccountsPayable\Aggregates\PaymentBatch.cs" />
     </ItemGroup>
 
     <ItemGroup>

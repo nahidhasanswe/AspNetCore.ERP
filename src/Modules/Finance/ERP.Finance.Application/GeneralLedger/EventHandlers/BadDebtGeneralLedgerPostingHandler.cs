@@ -1,15 +1,19 @@
 using ERP.Core.Uow;
 using ERP.Finance.Domain.AccountsReceivable.Events;
+using ERP.Finance.Domain.FiscalYear.Aggregates;
 using ERP.Finance.Domain.GeneralLedger.Aggregates;
+using ERP.Finance.Domain.GeneralLedger.Services;
 using ERP.Finance.Domain.Shared.Currency;
 using MediatR;
 
 namespace ERP.Finance.Application.GeneralLedger.EventHandlers;
 
-public class BadDebtGLPostingHandler(
-    IJournalEntryRepository glRepository,
+public class BadDebtGeneralLedgerPostingHandler(
+    IJournalEntryRepository journalEntryRepository,
     IUnitOfWorkManager unitOfWork,
-    ICurrencyConversionService currencyConverter
+    ICurrencyConversionService currencyConverter,
+    IFiscalPeriodRepository fiscalPeriodRepository,
+    IAccountValidationService accountValidator
     ) : INotificationHandler<BadDebtWrittenOffEvent>
 {
     private const string SystemBaseCurrency = "USD";
@@ -17,6 +21,15 @@ public class BadDebtGLPostingHandler(
     public async Task Handle(BadDebtWrittenOffEvent notification, CancellationToken cancellationToken)
     {
         var writeOffAmount = notification.WriteOffAmount;
+        
+        // Fetch the fiscal period for the write-off date. This is now required for posting.
+        var fiscalPeriod = await fiscalPeriodRepository.GetPeriodByDateAsync(notification.WriteOffDate, cancellationToken);
+        if (fiscalPeriod is null)
+        {
+            // In a real system, you would log this error. An event handler should not throw an exception
+            // that stops the process, but this write-off cannot be posted without a valid period.
+            return; 
+        }
         
         // 1. Create Journal Entry
         var entry = new JournalEntry(
@@ -56,15 +69,13 @@ public class BadDebtGLPostingHandler(
             notification.CostCenterId
         ));
 
-        // Visualize the entry:
-        // 
-        
-        entry.Post();
+        // Post the entry using the fetched period and the injected validator.
+        entry.Post(fiscalPeriod, accountValidator);
 
         // 5. Persist the Journal Entry
         using var scope = unitOfWork.Begin();
         
-        await glRepository.AddAsync(entry, cancellationToken);
+        await journalEntryRepository.AddAsync(entry, cancellationToken);
         await scope.SaveChangesAsync(cancellationToken);
     }
 }

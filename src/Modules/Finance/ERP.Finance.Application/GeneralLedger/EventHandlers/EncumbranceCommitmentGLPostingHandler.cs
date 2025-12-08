@@ -1,22 +1,33 @@
 using ERP.Core.Uow;
 using ERP.Finance.Domain.Encumbrance.Aggregates;
 using ERP.Finance.Domain.Encumbrance.Events;
+using ERP.Finance.Domain.FiscalYear.Aggregates;
 using ERP.Finance.Domain.GeneralLedger.Aggregates;
 using ERP.Finance.Domain.GeneralLedger.Service;
+using ERP.Finance.Domain.GeneralLedger.Services;
 using ERP.Finance.Domain.Shared.ValueObjects;
 using MediatR;
 
 namespace ERP.Finance.Application.GeneralLedger.EventHandlers;
 
-public class EncumbranceCommitmentGLPostingHandler(
-    IJournalEntryRepository glRepository,
+public class EncumbranceCommitmentGlPostingHandler(
+    IJournalEntryRepository journalEntryRepository,
     IUnitOfWorkManager unitOfWork,
-    IGLConfigurationService glConfig,
-    IEncumbranceRepository encumbranceRepository // To fetch the original reserved amount
+    IGlConfigurationService glConfig,
+    IEncumbranceRepository encumbranceRepository, // To fetch the original reserved amount
+    IFiscalPeriodRepository fiscalPeriodRepository,
+    IAccountValidationService accountValidator
     ) : INotificationHandler<EncumbranceConvertedToCommitmentEvent>
 {
     public async Task Handle(EncumbranceConvertedToCommitmentEvent notification, CancellationToken cancellationToken)
     {
+        var fiscalPeriod = await fiscalPeriodRepository.GetPeriodByDateAsync(notification.OccurredOn, cancellationToken);
+        if (fiscalPeriod is null)
+        {
+            // Log error: Cannot post encumbrance commitment as no open fiscal period was found.
+            return;
+        }
+
         // 1. Fetch the original Encumbrance record to find the initial reserved amount.
         var originalEncumbrance = await encumbranceRepository.GetByIdAsync(notification.EncumbranceId);
         if (originalEncumbrance == null) return; 
@@ -31,7 +42,7 @@ public class EncumbranceCommitmentGLPostingHandler(
         if (adjustmentAmount == 0) return;
 
         // 2. Resolve the GL Accounts
-        var encumbrancePostingData = await glConfig.GetEncumbranceGLAccounts(notification.GlAccountId, cancellationToken);
+        var encumbrancePostingData = await glConfig.GetEncumbranceGlAccounts(notification.GlAccountId, cancellationToken);
         if (encumbrancePostingData == null) return; 
 
         var entry = new JournalEntry(
@@ -73,11 +84,11 @@ public class EncumbranceCommitmentGLPostingHandler(
 
         // Visualize the adjustment entry logic: 
 
-        entry.Post();
+        entry.Post(fiscalPeriod, accountValidator);
 
         using var scope = unitOfWork.Begin();
         
-        await glRepository.AddAsync(entry, cancellationToken);
+        await journalEntryRepository.AddAsync(entry, cancellationToken);
         await scope.SaveChangesAsync(cancellationToken);
     }
 }

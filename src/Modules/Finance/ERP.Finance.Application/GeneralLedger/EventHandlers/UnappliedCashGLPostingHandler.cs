@@ -1,23 +1,34 @@
 using ERP.Core.Uow;
 using ERP.Finance.Domain.AccountsReceivable.Events;
+using ERP.Finance.Domain.FiscalYear.Aggregates;
 using ERP.Finance.Domain.GeneralLedger.Aggregates;
 using ERP.Finance.Domain.GeneralLedger.Service;
+using ERP.Finance.Domain.GeneralLedger.Services;
 using ERP.Finance.Domain.Shared.Currency;
 using MediatR;
 
 namespace ERP.Finance.Application.GeneralLedger.EventHandlers;
 
-public class UnappliedCashGLPostingHandler(
-    IJournalEntryRepository glRepository,
+public class UnappliedCashGlPostingHandler(
+    IJournalEntryRepository journalEntryRepository,
     IUnitOfWorkManager unitOfWork,
     ICurrencyConversionService currencyConverter,
-    IGLConfigurationService glConfig // Service to get the Unapplied Cash/Clearing GL Account ID
+    IGlConfigurationService glConfig, // Service to get the Unapplied Cash/Clearing GL Account ID
+    IFiscalPeriodRepository fiscalPeriodRepository,
+    IAccountValidationService accountValidator
     ) : INotificationHandler<UnappliedCashCreatedEvent>
 {
     private const string SystemBaseCurrency = "USD";
 
     public async Task Handle(UnappliedCashCreatedEvent notification, CancellationToken cancellationToken)
     {
+        var fiscalPeriod = await fiscalPeriodRepository.GetPeriodByDateAsync(notification.OccurredOn, cancellationToken);
+        if (fiscalPeriod is null)
+        {
+            // Log error: Cannot post unapplied cash GL as no open fiscal period was found.
+            return;
+        }
+
         var receivedAmount = notification.TotalReceivedAmount;
         
         // Create Journal Entry
@@ -60,12 +71,12 @@ public class UnappliedCashGLPostingHandler(
 
         // Visualize the entry: 
         
-        entry.Post();
+        entry.Post(fiscalPeriod, accountValidator);
 
         // Persist the Journal Entry
         using var scope = unitOfWork.Begin();
         
-        await glRepository.AddAsync(entry, cancellationToken);
+        await journalEntryRepository.AddAsync(entry, cancellationToken);
         await scope.SaveChangesAsync(cancellationToken);
     }
 }

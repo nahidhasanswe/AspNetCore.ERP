@@ -1,26 +1,37 @@
 using ERP.Core.Uow;
 using ERP.Finance.Domain.Encumbrance.Events;
+using ERP.Finance.Domain.FiscalYear.Aggregates;
 using ERP.Finance.Domain.GeneralLedger.Aggregates;
 using ERP.Finance.Domain.GeneralLedger.Service;
+using ERP.Finance.Domain.GeneralLedger.Services;
 using MediatR;
 
 namespace ERP.Finance.Application.GeneralLedger.EventHandlers;
 
-public class EncumbranceGLPostingHandler(
-    IJournalEntryRepository glRepository,
+public class EncumbranceGlPostingHandler(
+    IJournalEntryRepository journalEntryRepository,
     IUnitOfWorkManager unitOfWork,
-    IGLConfigurationService glConfig // Service to map GlAccountId to Encumbrance Accounts
+    IGlConfigurationService glConfig, // Service to map GlAccountId to Encumbrance Accounts
+    IFiscalPeriodRepository fiscalPeriodRepository,
+    IAccountValidationService accountValidator
     ) : INotificationHandler<EncumbranceCreatedEvent>
 {
     private const string SystemBaseCurrency = "USD";
 
     public async Task Handle(EncumbranceCreatedEvent notification, CancellationToken cancellationToken)
     {
+        var fiscalPeriod = await fiscalPeriodRepository.GetPeriodByDateAsync(notification.OccurredOn, cancellationToken);
+        if (fiscalPeriod is null)
+        {
+            // Log error: Cannot post encumbrance as no open fiscal period was found.
+            return;
+        }
+
         var amount = notification.Amount;
         
         // 1. Resolve the specific Encumbrance and Appropriation GL Accounts
         // These are non-standard GL accounts used solely for budgetary tracking.
-        var encumbrancePostingData = await glConfig.GetEncumbranceGLAccounts(notification.GlAccountId, cancellationToken);
+        var encumbrancePostingData = await glConfig.GetEncumbranceGlAccounts(notification.GlAccountId, cancellationToken);
         
         if (encumbrancePostingData is null)
         {
@@ -59,11 +70,11 @@ public class EncumbranceGLPostingHandler(
         ));
 
 
-        entry.Post();
+        entry.Post(fiscalPeriod, accountValidator);
 
         // 4. Persist
         using var scope = unitOfWork.Begin();
-        await glRepository.AddAsync(entry, cancellationToken);
+        await journalEntryRepository.AddAsync(entry, cancellationToken);
         await scope.SaveChangesAsync(cancellationToken);
     }
 }

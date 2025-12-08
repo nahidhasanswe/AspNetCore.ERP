@@ -12,7 +12,7 @@ public class FiscalPeriodCheckService(IFiscalPeriodRepository repository) : IFis
 
     public async Task<Result<bool>> EnsurePeriodIsOpenForPosting(DateTime transactionDate)
     {
-        var period = await repository.GetPeriodByDateAsync(transactionDate.Date);
+        var period = await repository.GetPeriodByDateAsync(transactionDate.Date, CancellationToken.None);
 
         if (period == null)
             throw new DomainException($"No fiscal period defined for date {transactionDate.ToShortDateString()}.");

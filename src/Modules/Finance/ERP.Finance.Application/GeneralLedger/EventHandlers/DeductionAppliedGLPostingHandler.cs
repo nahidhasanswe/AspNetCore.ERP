@@ -1,15 +1,19 @@
 using ERP.Core.Uow;
 using ERP.Finance.Domain.AccountsReceivable.Events;
+using ERP.Finance.Domain.FiscalYear.Aggregates;
 using ERP.Finance.Domain.GeneralLedger.Aggregates;
+using ERP.Finance.Domain.GeneralLedger.Services;
 using ERP.Finance.Domain.Shared.Currency;
 using MediatR;
 
 namespace ERP.Finance.Application.GeneralLedger.EventHandlers;
 
-public class DeductionAppliedGLPostingHandler(
-    IJournalEntryRepository glRepository,
+public class DeductionAppliedGlPostingHandler(
+    IJournalEntryRepository journalEntryRepository,
     IUnitOfWorkManager unitOfWork,
-    ICurrencyConversionService currencyConverter
+    ICurrencyConversionService currencyConverter,
+    IFiscalPeriodRepository fiscalPeriodRepository,
+    IAccountValidationService accountValidator
     ) : INotificationHandler<DeductionAppliedToInvoiceEvent>
 {
     private const string SystemBaseCurrency = "USD";
@@ -17,6 +21,16 @@ public class DeductionAppliedGLPostingHandler(
     public async Task Handle(DeductionAppliedToInvoiceEvent notification, CancellationToken cancellationToken)
     {
         var deductionAmount = notification.DeductionAmount;
+
+        // Fetch the fiscal period for the deduction date. This is now required for posting.
+        var fiscalPeriod = await fiscalPeriodRepository.GetPeriodByDateAsync(notification.OccurredOn, cancellationToken);
+        if (fiscalPeriod is null)
+        {
+            // In a real system, you would log this error. An event handler should not throw an exception
+            // that stops the process, but this deduction cannot be posted without a valid period.
+            // Consider moving this to a dead-letter queue for later processing.
+            return; 
+        }
         
         var entry = new JournalEntry(
             $"Deduction Applied to Invoice: {notification.InvoiceId}. Reason Code: {notification.DeductionReasonCode}", 
@@ -51,12 +65,13 @@ public class DeductionAppliedGLPostingHandler(
             costCenterId: null
         ));
         
-        entry.Post();
+        // Post the entry using the fetched period and the injected validator.
+        entry.Post(fiscalPeriod, accountValidator);
 
         // Persist the Journal Entry
         using var scope = unitOfWork.Begin();
         
-        await glRepository.AddAsync(entry, cancellationToken);
+        await journalEntryRepository.AddAsync(entry, cancellationToken);
         await scope.SaveChangesAsync(cancellationToken);
     }
 }

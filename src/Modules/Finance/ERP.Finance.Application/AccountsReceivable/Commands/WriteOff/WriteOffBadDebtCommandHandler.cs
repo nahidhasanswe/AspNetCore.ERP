@@ -9,7 +9,7 @@ namespace ERP.Finance.Application.AccountsReceivable.Commands.WriteOff;
 public class WriteOffBadDebtCommandHandler(
     ICustomerInvoiceRepository repository,
     IUnitOfWorkManager unitOfWork,
-    IGLConfigurationService glConfig // Service to get the Bad Debt GL Account ID
+    IGlConfigurationService glConfig // Service to get the Bad Debt GL Account ID
 ) : IRequestHandler<WriteOffBadDebtCommand, Result<bool>>
 {
     public async Task<Result<bool>> Handle(WriteOffBadDebtCommand command, CancellationToken cancellationToken)

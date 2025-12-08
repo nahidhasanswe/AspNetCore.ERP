@@ -4,5 +4,7 @@ public enum PeriodStatus
 {
     Open,           // Transactions allowed
     SoftClose,      // Only adjustments/admin transactions allowed
-    HardClose       // No transactions allowed
+    HardClose,      // No transactions allowed
+    NeverOpened,
+    
 }

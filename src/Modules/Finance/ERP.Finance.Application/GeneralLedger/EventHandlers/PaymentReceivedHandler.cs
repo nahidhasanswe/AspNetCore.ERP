@@ -1,21 +1,32 @@
 using ERP.Core.Uow;
 using ERP.Finance.Domain.AccountsReceivable.Events;
+using ERP.Finance.Domain.FiscalYear.Aggregates;
 using ERP.Finance.Domain.GeneralLedger.Aggregates;
+using ERP.Finance.Domain.GeneralLedger.Services;
 using ERP.Finance.Domain.Shared.Currency;
 using MediatR;
 
 namespace ERP.Finance.Application.GeneralLedger.EventHandlers;
 
 public class PaymentReceivedHandler(
-    IJournalEntryRepository glRepository,
+    IJournalEntryRepository journalEntryRepository,
     IUnitOfWorkManager unitOfWork,
-    ICurrencyConversionService currencyConverter
+    ICurrencyConversionService currencyConverter,
+    IFiscalPeriodRepository fiscalPeriodRepository,
+    IAccountValidationService accountValidator
     ) : INotificationHandler<PaymentReceivedEvent>
 {
     private const string SystemBaseCurrency = "USD";
     
     public async Task Handle(PaymentReceivedEvent notification, CancellationToken cancellationToken)
     {
+        var fiscalPeriod = await fiscalPeriodRepository.GetPeriodByDateAsync(notification.PaymentDate, cancellationToken);
+        if (fiscalPeriod is null)
+        {
+            // Log error: Cannot post payment GL as no open fiscal period was found.
+            return;
+        }
+
         var entry = new JournalEntry(
             $"Cash Receipt for Invoice {notification.InvoiceId}", 
             notification.Reference
@@ -52,11 +63,11 @@ public class PaymentReceivedHandler(
         entry.AddLine(debitLine);
         entry.AddLine(creditLine);
 
-        entry.Post(); 
+        entry.Post(fiscalPeriod, accountValidator); 
         
         using var scope = unitOfWork.Begin();
         
-        await glRepository.AddAsync(entry, cancellationToken);
+        await journalEntryRepository.AddAsync(entry, cancellationToken);
         await scope.SaveChangesAsync(cancellationToken);
     }
 }

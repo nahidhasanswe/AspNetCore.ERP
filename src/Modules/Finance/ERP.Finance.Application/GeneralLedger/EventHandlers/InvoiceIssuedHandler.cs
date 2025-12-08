@@ -1,15 +1,19 @@
 using ERP.Core.Uow;
 using ERP.Finance.Domain.Events;
+using ERP.Finance.Domain.FiscalYear.Aggregates;
 using ERP.Finance.Domain.GeneralLedger.Aggregates;
+using ERP.Finance.Domain.GeneralLedger.Services;
 using ERP.Finance.Domain.Shared.Currency;
 using MediatR;
 
 namespace ERP.Finance.Application.GeneralLedger.EventHandlers;
 
 public class InvoiceIssuedHandler(
-    IJournalEntryRepository glRepository,
+    IJournalEntryRepository journalEntryRepository,
     IUnitOfWorkManager unitOfWork,
-    ICurrencyConversionService currencyConverter
+    ICurrencyConversionService currencyConverter,
+    IFiscalPeriodRepository fiscalPeriodRepository,
+    IAccountValidationService accountValidator
     ) : INotificationHandler<InvoiceIssuedEvent>
 {
 
@@ -17,6 +21,13 @@ public class InvoiceIssuedHandler(
     
     public async Task Handle(InvoiceIssuedEvent notification, CancellationToken cancellationToken)
     {
+        var fiscalPeriod = await fiscalPeriodRepository.GetPeriodByDateAsync(notification.OccurredOn, cancellationToken);
+        if (fiscalPeriod is null)
+        {
+            // Log error: Cannot post invoice GL as no open fiscal period was found.
+            return;
+        }
+
         var entry = new JournalEntry(
             $"Accrual for Customer Invoice {notification.InvoiceId}", 
             notification.InvoiceId.ToString()
@@ -59,11 +70,11 @@ public class InvoiceIssuedHandler(
             ));
         }
 
-        entry.Post();
+        entry.Post(fiscalPeriod, accountValidator);
 
         using var scope = unitOfWork.Begin();
         
-        await glRepository.AddAsync(entry, cancellationToken);
+        await journalEntryRepository.AddAsync(entry, cancellationToken);
         await scope.SaveChangesAsync(cancellationToken);
     }
 }

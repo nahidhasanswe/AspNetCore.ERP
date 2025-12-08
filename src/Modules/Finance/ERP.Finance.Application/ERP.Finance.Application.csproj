@@ -17,9 +17,8 @@
       <Folder Include="FiscalYear\Mappings\" />
       <Folder Include="FixedAssetManagement\EventHandlers\" />
       <Folder Include="FixedAssetManagement\Mappings\" />
-      <Folder Include="GeneralLedger\DTOs\" />
       <Folder Include="GeneralLedger\Mappings\" />
-      <Folder Include="GeneralLedger\Services\" />
+      <Folder Include="Shared\DTOs\" />
       <Folder Include="TaxManagement\DTOs\" />
       <Folder Include="TaxManagement\EventHandlers\" />
       <Folder Include="TaxManagement\Mappings\" />
@@ -29,6 +28,10 @@
     <ItemGroup>
       <ProjectReference Include="..\..\..\Core\ERP.Core.AutoMapper\ERP.Core.AutoMapper.csproj" />
       <ProjectReference Include="..\ERP.Finance.Infrastructure\ERP.Finance.Infrastructure.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Remove="Configurations\IFinanceConfigService.cs" />
     </ItemGroup>
 
 </Project>

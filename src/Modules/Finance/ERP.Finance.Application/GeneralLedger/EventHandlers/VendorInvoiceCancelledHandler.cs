@@ -1,21 +1,32 @@
 using ERP.Core.Uow;
 using ERP.Finance.Domain.AccountsPayable.Events;
+using ERP.Finance.Domain.FiscalYear.Aggregates;
 using ERP.Finance.Domain.GeneralLedger.Aggregates;
+using ERP.Finance.Domain.GeneralLedger.Services;
 using ERP.Finance.Domain.Shared.Currency;
 using MediatR;
 
 namespace ERP.Finance.Application.GeneralLedger.EventHandlers;
 
 public class VendorInvoiceCancelledHandler(
-    IJournalEntryRepository glRepository,
+    IJournalEntryRepository journalEntryRepository,
     IUnitOfWorkManager unitOfWork,
-    ICurrencyConversionService currencyConverter 
+    ICurrencyConversionService currencyConverter,
+    IFiscalPeriodRepository fiscalPeriodRepository,
+    IAccountValidationService accountValidator
     ) : INotificationHandler<VendorInvoiceCancelledEvent>
 {
     private const string SystemBaseCurrency = "USD"; 
 
     public async Task Handle(VendorInvoiceCancelledEvent notification, CancellationToken cancellationToken)
     {
+        var fiscalPeriod = await fiscalPeriodRepository.GetPeriodByDateAsync(notification.CancellationDate, cancellationToken);
+        if (fiscalPeriod is null)
+        {
+            // Log error: Cannot post invoice cancellation GL as no open fiscal period was found.
+            return;
+        }
+
         // 1. Create the GL Reversal Aggregate Root
         var entry = new JournalEntry(
             $"Reversal of Cancelled Vendor Invoice {notification.InvoiceId} - Reason: {notification.CancellationReason}", 
@@ -66,10 +77,10 @@ public class VendorInvoiceCancelledHandler(
         }
 
         // 5. Finalize and Post
-        entry.Post();
+        entry.Post(fiscalPeriod, accountValidator);
 
         using var scope = unitOfWork.Begin();
-        await glRepository.AddAsync(entry, cancellationToken);
+        await journalEntryRepository.AddAsync(entry, cancellationToken);
         await scope.SaveChangesAsync(cancellationToken);
     }
 }
