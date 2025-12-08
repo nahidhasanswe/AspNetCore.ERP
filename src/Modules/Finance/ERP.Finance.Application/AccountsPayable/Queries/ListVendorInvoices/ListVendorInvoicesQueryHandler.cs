@@ -9,7 +9,7 @@ public class ListVendorInvoicesQueryHandler(IVendorInvoiceRepository invoiceRepo
 {
     public async Task<Result<IEnumerable<VendorInvoiceSummaryDto>>> Handle(ListVendorInvoicesQuery request, CancellationToken cancellationToken)
     {
-        var allInvoices = await invoiceRepository.GetAllListAsync(request.VendorId, request.Status, null, cancellationToken);
+        var allInvoices = await invoiceRepository.GetAllListAsync(request.VendorId, request.Status, null, null, null, cancellationToken);
         
         var summaryDtos = allInvoices.Select(inv => new VendorInvoiceSummaryDto(
             inv.Id,
