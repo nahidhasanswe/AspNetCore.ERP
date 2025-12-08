@@ -1,5 +1,6 @@
 using ERP.Core.Aggregates;
 using ERP.Core.Exceptions;
+using ERP.Finance.Domain.Shared.ValueObjects;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,7 +24,6 @@ public class PurchaseOrder : AggregateRoot
     private readonly List<PurchaseOrderLine> _lines = new();
     public IReadOnlyCollection<PurchaseOrderLine> Lines => _lines.AsReadOnly();
 
-    // For 3-way matching, we track received quantities
     private readonly Dictionary<Guid, decimal> _receivedQuantities = new();
 
     private PurchaseOrder() { }
@@ -34,6 +34,14 @@ public class PurchaseOrder : AggregateRoot
         OrderDate = orderDate;
         Status = POStatus.Open;
         _lines.AddRange(lines);
+    }
+
+    public void AddLine(Guid productId, string description, decimal quantity, Money unitPrice)
+    {
+        if (Status != POStatus.Open)
+            throw new DomainException("Can only add lines to an open purchase order.");
+
+        _lines.Add(new PurchaseOrderLine(productId, description, quantity, unitPrice));
     }
 
     public void ReceiveGoods(Guid poLineId, decimal quantityReceived)
