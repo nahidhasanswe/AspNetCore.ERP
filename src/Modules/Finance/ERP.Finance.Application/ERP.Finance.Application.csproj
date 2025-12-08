@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <Folder Include="AccountsPayable\Mappings\" />
+      <Folder Include="AccountsReceivable\Mappings\" />
+      <Folder Include="AccountsReceivable\Services\" />
+      <Folder Include="Budgeting\EventHandlers\" />
+      <Folder Include="Budgeting\Mappings\" />
+      <Folder Include="Configurations\" />
+      <Folder Include="FiscalYear\EventHandlers\" />
+      <Folder Include="FiscalYear\Mappings\" />
+      <Folder Include="FixedAssetManagement\EventHandlers\" />
+      <Folder Include="FixedAssetManagement\Mappings\" />
+      <Folder Include="GeneralLedger\DTOs\" />
+      <Folder Include="GeneralLedger\Mappings\" />
+      <Folder Include="GeneralLedger\Services\" />
+      <Folder Include="TaxManagement\DTOs\" />
+      <Folder Include="TaxManagement\EventHandlers\" />
+      <Folder Include="TaxManagement\Mappings\" />
+      <Folder Include="TaxManagement\Q ueries\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\..\Core\ERP.Core.AutoMapper\ERP.Core.AutoMapper.csproj" />
+      <ProjectReference Include="..\ERP.Finance.Infrastructure\ERP.Finance.Infrastructure.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <Folder Include="AccountsPayable\Specifications\" />
+      <Folder Include="AccountsReceivable\DTOs\" />
+      <Folder Include="AccountsReceivable\Specifications\" />
+      <Folder Include="Budgeting\Specifications\" />
+      <Folder Include="FiscalYear\DTOs\" />
+      <Folder Include="FiscalYear\Events\" />
+      <Folder Include="FiscalYear\Specifications\" />
+      <Folder Include="FixedAssetManagement\DTOs\" />
+      <Folder Include="FixedAssetManagement\Service\" />
+      <Folder Include="FixedAssetManagement\Specifications\" />
+      <Folder Include="GeneralLedger\DTOs\" />
+      <Folder Include="GeneralLedger\Specifications\" />
+      <Folder Include="Shared\DTOs\" />
+      <Folder Include="TaxManagement\Specifications\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\..\Core\ERP.Core\ERP.Core.csproj" />
+    </ItemGroup>
+
+</Project>
