@@ -1,20 +1,22 @@
 using ERP.Core;
 using ERP.Core.Entities;
 using ERP.Finance.Domain.AccountsPayable.ValueObjects;
+using System;
+
 namespace ERP.Finance.Domain.AccountsPayable.Aggregates;
 
 public class Vendor : Entity
 {
     public string Name { get; private set; }
     public string TaxId { get; private set; }
-    public Address Address { get; private set; } // This is now ERP.Domain.ValueObjects.Address
-    public ContactInfo ContactInfo { get; private set; } // This is now ERP.Domain.ValueObjects.ContactInfo
-    public string PaymentTerms { get; private set; } // e.g., NET 30, NET 60
+    public Address Address { get; private set; }
+    public ContactInfo ContactInfo { get; private set; }
+    public string PaymentTerms { get; private set; }
     public string DefaultCurrency { get; private set; }
     public VendorBankDetails VendorBankDetails { get; private set; }
     public bool IsActive { get; private set; }
 
-    private Vendor() { }  // EF Core
+    private Vendor() { }
 
     public Vendor(string name, string taxId, Address address, ContactInfo contactInfo, string paymentTerms, string defaultCurrency, VendorBankDetails bankDetails) : base(Guid.NewGuid())
     {
@@ -28,7 +30,7 @@ public class Vendor : Entity
         IsActive = true;
     }
 
-    public Result UpdateInfo(string name, string taxId, Address address, ContactInfo contactInfo, string paymentTerms, string defaultCurrency, VendorBankDetails bankDetails)
+    public Result UpdateInfo(string name, string taxId, Address address, ContactInfo contactInfo, string paymentTerms, string defaultCurrency, VendorBankDetails bankDetails, bool isActive)
     {
         Name = name;
         TaxId = taxId;
@@ -37,6 +39,7 @@ public class Vendor : Entity
         PaymentTerms = paymentTerms;
         DefaultCurrency = defaultCurrency;
         VendorBankDetails = bankDetails;
+        IsActive = isActive; // Update IsActive status
 
         return Result.Success();
     }

@@ -1,12 +1,11 @@
-using ERP.Core;
 using ERP.Finance.Application.AccountsPayable.DTOs;
 using ERP.Finance.Domain.Shared.DTOs;
 using MediatR;
-using System;
+using ERP.Core.Behaviors;
 
 namespace ERP.Finance.Application.AccountsPayable.Commands.UpdateVendor;
 
-public class UpdateVendorCommand : IRequest<Result>
+public class UpdateVendorCommand : IRequestCommand<Unit>
 {
     public Guid VendorId { get; set; }
     public string Name { get; set; }

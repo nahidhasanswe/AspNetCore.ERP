@@ -1,9 +1,18 @@
 using ERP.Core.Aggregates;
 using ERP.Finance.Domain.Shared.ValueObjects;
 using ERP.Finance.Domain.AccountsPayable.Enums;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ERP.Finance.Domain.AccountsPayable.Aggregates;
 
+public enum RecurrenceInterval
+{
+    Monthly,
+    Quarterly,
+    Yearly
+}
 
 public class RecurringInvoice : AggregateRoot
 {
@@ -38,6 +47,23 @@ public class RecurringInvoice : AggregateRoot
         return create;
     }
 
+    public void Update(RecurrenceInterval interval, DateTime startDate, DateTime? endDate, IEnumerable<RecurringInvoiceLine> newLines)
+    {
+        Interval = interval;
+        StartDate = startDate;
+        EndDate = endDate;
+        
+        _lines.Clear();
+        _lines.AddRange(newLines);
+
+        // Recalculate NextOccurrenceDate if StartDate changed and it's still active
+        if (IsActive && NextOccurrenceDate < StartDate)
+        {
+            NextOccurrenceDate = StartDate;
+        }
+        // Further logic might be needed to adjust NextOccurrenceDate based on current date and new interval
+    }
+
     public VendorInvoice GenerateInvoice(DateTime generationDate)
     {
         if (!IsActive || generationDate.Date != NextOccurrenceDate.Date)
@@ -49,8 +75,6 @@ public class RecurringInvoice : AggregateRoot
             invoiceLines.Add(new InvoiceLineItem(line.Description, line.LineAmount, line.ExpenseAccountId, line.CostCenterId));
         }
 
-        // Logic to create a non-PO invoice
-        // The AP Control Account would come from vendor or system settings
         var apControlAccountId = Guid.NewGuid(); // Placeholder
         var dueDate = generationDate.AddDays(30); // Placeholder due date logic
 
@@ -60,7 +84,7 @@ public class RecurringInvoice : AggregateRoot
             generationDate,
             dueDate,
             apControlAccountId,
-            null, // Cost center could be on the recurring template header
+            null,
             invoiceLines
         );
 
@@ -83,6 +107,11 @@ public class RecurringInvoice : AggregateRoot
             IsActive = false;
         }
     }
+
+    public void Deactivate()
+    {
+        IsActive = false;
+    }
 }
 
 public class RecurringInvoiceLine
@@ -91,5 +120,12 @@ public class RecurringInvoiceLine
     public Money LineAmount { get; private set; }
     public Guid ExpenseAccountId { get; private set; }
     public Guid? CostCenterId { get; private set; }
-    // Constructor and properties
+
+    public RecurringInvoiceLine(string description, Money lineAmount, Guid expenseAccountId, Guid? costCenterId)
+    {
+        Description = description;
+        LineAmount = lineAmount;
+        ExpenseAccountId = expenseAccountId;
+        CostCenterId = costCenterId;
+    }
 }

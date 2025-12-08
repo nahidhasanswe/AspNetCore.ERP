@@ -5,6 +5,7 @@ public interface IGlConfigurationService
     Task<Guid> GetBadDebtExpenseAccountId(string currency, CancellationToken cancellationToken = default);
     Task<Guid> GetUnappliedCashClearingAccountId(string currency, CancellationToken cancellationToken = default);
 
+    Task<Guid> DebitMemoClearingAccountIdAsync(string currency, CancellationToken cancellationToken = default);
     Task<EncumbranceGlPostingDto?> GetEncumbranceGlAccounts(Guid glAccountId,
         CancellationToken cancellationToken = default);
 }
