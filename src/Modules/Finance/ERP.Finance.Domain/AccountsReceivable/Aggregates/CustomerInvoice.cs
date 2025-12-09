@@ -204,6 +204,10 @@ public class CustomerInvoice : AggregateRoot
         {
             Status = InvoiceStatus.Paid; // Or InvoiceStatus.Closed
         }
+        else if (Status == InvoiceStatus.Issued || Status == InvoiceStatus.Overdue) // If it was issued or overdue, now it's partially paid
+        {
+            Status = InvoiceStatus.PartiallyPaid;
+        }
 
         // Raise event for GL posting (Debit AR Control, Credit Customer Credits Clearing)
         AddDomainEvent(new CustomerCreditAppliedToInvoiceEvent(
@@ -227,7 +231,11 @@ public class CustomerInvoice : AggregateRoot
         // If the invoice was fully paid and now has an outstanding balance, revert status
         if (Status == InvoiceStatus.Paid && OutstandingBalance.Amount > 0)
         {
-            Status = InvoiceStatus.Issued; // Or Overdue, depending on DueDate
+            Status = InvoiceStatus.PartiallyPaid; // Revert to PartiallyPaid
+        }
+        else if (Status == InvoiceStatus.PartiallyPaid && TotalPaymentsReceived == 0)
+        {
+            Status = InvoiceStatus.Issued; // If all payments unapplied, revert to Issued
         }
 
         // Raise event for GL reversal (Debit Cash, Credit AR)
@@ -271,6 +279,10 @@ public class CustomerInvoice : AggregateRoot
         if (OutstandingBalance.Amount == 0)
         {
             Status = InvoiceStatus.Paid;
+        }
+        else if (Status == InvoiceStatus.Issued || Status == InvoiceStatus.Overdue) // If it was issued or overdue, now it's partially paid
+        {
+            Status = InvoiceStatus.PartiallyPaid;
         }
         
         AddDomainEvent(new PaymentReceivedEvent(
