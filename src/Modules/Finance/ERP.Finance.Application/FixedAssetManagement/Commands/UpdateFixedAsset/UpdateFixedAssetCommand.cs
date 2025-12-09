@@ -12,4 +12,5 @@ public class UpdateFixedAssetCommand : IRequest<Result>
     public Guid DepreciationExpenseAccountId { get; set; }
     public Guid AccumulatedDepreciationAccountId { get; set; }
     public Guid? CostCenterId { get; set; }
+    public string Location { get; set; }
 }

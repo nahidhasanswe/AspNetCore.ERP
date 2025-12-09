@@ -20,4 +20,5 @@ public class CreateFixedAssetCommand : IRequest<Result<Guid>>
     public int UsefulLifeYears { get; set; }
     public decimal SalvageValue { get; set; }
     public Guid? CostCenterId { get; set; }
+    public string Location { get; set; }
 }

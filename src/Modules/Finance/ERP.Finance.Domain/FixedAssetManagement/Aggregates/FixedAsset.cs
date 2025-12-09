@@ -1,9 +1,8 @@
 using ERP.Core.Aggregates;
 using ERP.Core.Exceptions;
-using ERP.Finance.Domain.FixedAssetManagement.Enums; // Added for FixedAssetStatus
+using ERP.Finance.Domain.FixedAssetManagement.Enums;
 using ERP.Finance.Domain.FixedAssetManagement.Events;
 using ERP.Finance.Domain.Shared.ValueObjects;
-using System;
 
 namespace ERP.Finance.Domain.FixedAssetManagement.Aggregates;
 
@@ -19,13 +18,14 @@ public class FixedAsset : AggregateRoot
     public DepreciationSchedule Schedule { get; private set; }
     
     public Guid? CostCenterId { get; private set; }
+    public string Location { get; private set; } // New property for physical location
     public decimal TotalAccumulatedDepreciation { get; private set; } // Tracks depreciation posted so far
     public FixedAssetStatus Status { get; private set; } // New property
 
     private FixedAsset() { }
 
     public FixedAsset(string tagNumber, string description, Money cost, DateTime date, 
-                      Guid assetId, Guid expenseId, Guid accumulatedId, DepreciationSchedule schedule, Guid? costCenterId) 
+                      Guid assetId, Guid expenseId, Guid accumulatedId, DepreciationSchedule schedule, Guid? costCenterId, string location) 
                       : base(Guid.NewGuid())
     {
         if (cost.Amount <= 0) throw new DomainException("Acquisition cost must be positive.");
@@ -39,11 +39,12 @@ public class FixedAsset : AggregateRoot
         AccumulatedDepreciationAccountId = accumulatedId;
         Schedule = schedule;
         CostCenterId = costCenterId;
+        Location = location;
         TotalAccumulatedDepreciation = 0m;
         Status = FixedAssetStatus.Active; // Initial status
     }
 
-    public void Update(string description, Guid assetAccountId, Guid depreciationExpenseAccountId, Guid accumulatedDepreciationAccountId, Guid? costCenterId)
+    public void Update(string description, Guid assetAccountId, Guid depreciationExpenseAccountId, Guid accumulatedDepreciationAccountId, Guid? costCenterId, string location)
     {
         if (Status == FixedAssetStatus.Disposed || Status == FixedAssetStatus.Retired)
             throw new DomainException("Cannot update a disposed or retired asset.");
@@ -53,7 +54,83 @@ public class FixedAsset : AggregateRoot
         DepreciationExpenseAccountId = depreciationExpenseAccountId;
         AccumulatedDepreciationAccountId = accumulatedDepreciationAccountId;
         CostCenterId = costCenterId;
+        Location = location;
         // Optionally raise an AssetUpdatedEvent
+    }
+
+    public void Revalue(DateTime revaluationDate, Money newAcquisitionCost, Guid revaluationGainLossAccountId)
+    {
+        if (Status == FixedAssetStatus.Disposed || Status == FixedAssetStatus.Retired)
+            throw new DomainException("Cannot revalue a disposed or retired asset.");
+        if (newAcquisitionCost.Amount <= 0)
+            throw new DomainException("New acquisition cost must be positive.");
+        if (newAcquisitionCost.Currency != AcquisitionCost.Currency)
+            throw new DomainException("Revaluation currency must match asset currency.");
+
+        Money oldAcquisitionCost = AcquisitionCost;
+        AcquisitionCost = newAcquisitionCost;
+        
+        // Reset accumulated depreciation for simplicity, or adjust proportionally
+        // In a real system, this would be more complex, involving reversal of old depreciation.
+        decimal oldTotalAccumulatedDepreciation = TotalAccumulatedDepreciation;
+        TotalAccumulatedDepreciation = 0m; 
+
+        AddDomainEvent(new AssetRevaluedEvent(
+            this.Id,
+            revaluationDate,
+            oldAcquisitionCost,
+            newAcquisitionCost,
+            oldTotalAccumulatedDepreciation,
+            revaluationGainLossAccountId,
+            this.AssetAccountId,
+            this.AccumulatedDepreciationAccountId,
+            this.CostCenterId
+        ));
+    }
+
+    public void Transfer(Guid newCostCenterId, DateTime transferDate)
+    {
+        if (Status == FixedAssetStatus.Disposed || Status == FixedAssetStatus.Retired)
+            throw new DomainException("Cannot transfer a disposed or retired asset.");
+        if (newCostCenterId == CostCenterId)
+            throw new DomainException("Asset is already in the specified cost center.");
+
+        Guid? oldCostCenterId = CostCenterId;
+        CostCenterId = newCostCenterId;
+
+        AddDomainEvent(new AssetTransferredEvent(
+            this.Id,
+            transferDate,
+            oldCostCenterId,
+            newCostCenterId,
+            this.AssetAccountId,
+            this.AccumulatedDepreciationAccountId, // Pass AccumulatedDepreciationAccountId
+            this.AcquisitionCost,
+            this.TotalAccumulatedDepreciation
+        ));
+    }
+
+    public void Impair(DateTime impairmentDate, Money impairmentLossAmount, Guid impairmentLossAccountId)
+    {
+        if (Status == FixedAssetStatus.Disposed || Status == FixedAssetStatus.Retired)
+            throw new DomainException("Cannot impair a disposed or retired asset.");
+        if (impairmentLossAmount.Amount <= 0)
+            throw new DomainException("Impairment loss amount must be positive.");
+        if (impairmentLossAmount.Amount > (AcquisitionCost.Amount - TotalAccumulatedDepreciation))
+            throw new DomainException("Impairment loss cannot exceed current book value.");
+
+        // Reduce the book value by the impairment loss
+        AcquisitionCost = new Money(AcquisitionCost.Amount - impairmentLossAmount.Amount, AcquisitionCost.Currency);
+        
+        AddDomainEvent(new AssetImpairedEvent(
+            this.Id,
+            impairmentDate,
+            impairmentLossAmount,
+            impairmentLossAccountId,
+            this.AssetAccountId,
+            this.AccumulatedDepreciationAccountId,
+            this.CostCenterId
+        ));
     }
 
     public void Dispose(DateTime disposalDate, Money proceeds, Guid gainLossAccountId)

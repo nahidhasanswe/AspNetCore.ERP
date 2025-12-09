@@ -2,6 +2,7 @@ using ERP.Core.Aggregates;
 using ERP.Core.Exceptions;
 using ERP.Finance.Domain.AccountsPayable.Events;
 using ERP.Finance.Domain.AccountsPayable.Services;
+using ERP.Finance.Domain.FixedAssetManagement.Aggregates; // For DepreciationSchedule
 using ERP.Finance.Domain.Shared.Enums;
 using ERP.Finance.Domain.Shared.ValueObjects;
 using System;
@@ -62,6 +63,43 @@ public class VendorInvoice : AggregateRoot
     {
         // ... (existing PO constructor logic)
         return new VendorInvoice(); // Simplified for brevity
+    }
+
+    public void MarkAsFixedAssetAcquisition(
+        string assetTagNumber,
+        string assetDescription,
+        DateTime acquisitionDate,
+        Money acquisitionCost,
+        Guid assetAccountId,
+        Guid depreciationExpenseAccountId,
+        Guid accumulatedDepreciationAccountId,
+        DepreciationMethod depreciationMethod,
+        int usefulLifeYears,
+        decimal salvageValue,
+        Guid? costCenterId)
+    {
+        if (Status != InvoiceStatus.Approved && Status != InvoiceStatus.Paid)
+            throw new DomainException("Only approved or paid invoices can be marked as fixed asset acquisitions.");
+        
+        // This method assumes the invoice line item corresponding to the asset has been identified.
+        // For simplicity, we're taking the asset details directly.
+        // In a real system, you might link this to a specific InvoiceLineItem.
+
+        AddDomainEvent(new FixedAssetAcquiredViaInvoiceEvent(
+            this.Id,
+            this.VendorId,
+            assetTagNumber,
+            assetDescription,
+            acquisitionDate,
+            acquisitionCost,
+            assetAccountId,
+            depreciationExpenseAccountId,
+            accumulatedDepreciationAccountId,
+            depreciationMethod,
+            usefulLifeYears,
+            salvageValue,
+            costCenterId
+        ));
     }
 
     public void ApplyCredit(CreditMemo creditMemo, Money amountToApply)

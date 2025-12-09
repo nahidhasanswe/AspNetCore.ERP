@@ -23,7 +23,8 @@ public class UpdateFixedAssetCommandHandler(IFixedAssetRepository fixedAssetRepo
             command.AssetAccountId,
             command.DepreciationExpenseAccountId,
             command.AccumulatedDepreciationAccountId,
-            command.CostCenterId
+            command.CostCenterId,
+            command.Location
         );
 
         await fixedAssetRepository.UpdateAsync(fixedAsset, cancellationToken);

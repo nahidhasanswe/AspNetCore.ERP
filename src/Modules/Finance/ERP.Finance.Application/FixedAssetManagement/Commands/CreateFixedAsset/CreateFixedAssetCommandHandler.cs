@@ -8,20 +8,12 @@ using System.Threading.Tasks;
 
 namespace ERP.Finance.Application.FixedAssetManagement.Commands.CreateFixedAsset;
 
-public class CreateFixedAssetCommandHandler : IRequestCommandHandler<CreateFixedAssetCommand, Guid>
+public class CreateFixedAssetCommandHandler(IFixedAssetRepository fixedAssetRepository, IUnitOfWorkManager unitOfWork)
+    : IRequestCommandHandler<CreateFixedAssetCommand, Guid>
 {
-    private readonly IFixedAssetRepository _fixedAssetRepository; // Need to define this
-    private readonly IUnitOfWorkManager _unitOfWork;
-
-    public CreateFixedAssetCommandHandler(IFixedAssetRepository fixedAssetRepository, IUnitOfWorkManager unitOfWork)
-    {
-        _fixedAssetRepository = fixedAssetRepository;
-        _unitOfWork = unitOfWork;
-    }
-
     public async Task<Result<Guid>> Handle(CreateFixedAssetCommand command, CancellationToken cancellationToken)
     {
-        using var scope = _unitOfWork.Begin();
+        using var scope = unitOfWork.Begin();
 
         var schedule = new DepreciationSchedule(
             command.DepreciationMethod,
@@ -38,10 +30,11 @@ public class CreateFixedAssetCommandHandler : IRequestCommandHandler<CreateFixed
             command.DepreciationExpenseAccountId,
             command.AccumulatedDepreciationAccountId,
             schedule,
-            command.CostCenterId
+            command.CostCenterId,
+            command.Location
         );
 
-        await _fixedAssetRepository.AddAsync(fixedAsset, cancellationToken);
+        await fixedAssetRepository.AddAsync(fixedAsset, cancellationToken);
         await scope.SaveChangesAsync(cancellationToken);
 
         return Result.Success(fixedAsset.Id);
