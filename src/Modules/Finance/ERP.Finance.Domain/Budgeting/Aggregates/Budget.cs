@@ -35,6 +35,36 @@ public class Budget : AggregateRoot
         BusinessUnitId = businessUnitId;
     }
 
+    // Private constructor for creating revisions
+    private Budget(Guid businessUnitId, string name, string fiscalPeriod, DateTime startDate, DateTime endDate, IEnumerable<BudgetItem> items) : base(Guid.NewGuid())
+    {
+        Name = name;
+        FiscalPeriod = fiscalPeriod;
+        StartDate = startDate.Date;
+        EndDate = endDate.Date;
+        Status = BudgetStatus.Draft; // Revisions start as Draft
+        BusinessUnitId = businessUnitId;
+        _items.AddRange(items.Select(item => new BudgetItem(item.AccountId, item.BudgetedAmount, item.Period, item.CostCenterId)));
+    }
+
+    public Budget CreateRevision(string newNameSuffix = " - Revision")
+    {
+        if (Status != BudgetStatus.Approved)
+            throw new InvalidOperationException("Only approved budgets can be revised.");
+
+        // Create new budget items based on current items
+        var revisedItems = Items.Select(item => new BudgetItem(item.AccountId, item.BudgetedAmount, item.Period, item.CostCenterId)).ToList();
+
+        return new Budget(
+            BusinessUnitId,
+            Name + newNameSuffix,
+            FiscalPeriod,
+            StartDate,
+            EndDate,
+            revisedItems
+        );
+    }
+
     public void Update(string name, string fiscalPeriod, DateTime startDate, DateTime endDate)
     {
         if (Status != BudgetStatus.Draft)
