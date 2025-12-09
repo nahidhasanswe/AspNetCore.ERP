@@ -87,6 +87,51 @@ public class CashReceipt : AggregateRoot
         ));
     }
 
+    public void Refund(Money refundAmount, Guid refundCashAccountId, string refundReference)
+    {
+        if (Status != ReceiptStatus.Unapplied && Status != ReceiptStatus.PartiallyApplied)
+            throw new DomainException("Only unapplied or partially applied cash can be refunded.");
+        if (refundAmount.Amount <= 0)
+            throw new DomainException("Refund amount must be positive.");
+        if (refundAmount.Amount > UnappliedAmount.Amount)
+            throw new DomainException("Cannot refund more than the unapplied amount.");
+
+        TotalAppliedAmount = new Money(TotalAppliedAmount.Amount + refundAmount.Amount, TotalAppliedAmount.Currency); // Treat refund as an application to reduce unapplied amount
+
+        if (UnappliedAmount.Amount == 0)
+        {
+            Status = ReceiptStatus.FullyApplied; // All unapplied amount is now either applied to invoices or refunded
+        }
+
+        AddDomainEvent(new CashReceiptRefundedEvent(
+            this.Id,
+            this.CustomerId,
+            refundAmount,
+            this.CashAccountId, // Original cash account
+            refundCashAccountId, // Account from which refund is made
+            refundReference,
+            DateTime.UtcNow
+        ));
+    }
+
+    public void Reverse(string reason)
+    {
+        if (Status == ReceiptStatus.Unapplied || Status == ReceiptStatus.Cancelled)
+            throw new DomainException("Only applied or partially applied cash receipts can be reversed.");
+        
+        Status = ReceiptStatus.Reversed;
+        // Raise event for GL reversal of all associated transactions
+        AddDomainEvent(new CashReceiptReversedEvent(
+            this.Id,
+            this.CustomerId,
+            this.TotalReceivedAmount,
+            this.CashAccountId,
+            this.TransactionReference,
+            reason,
+            DateTime.UtcNow
+        ));
+    }
+
     /// <summary>
     /// Reduces the unapplied balance by applying cash to an invoice or deduction.
     /// </summary>
