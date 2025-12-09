@@ -3,13 +3,13 @@ using ERP.Core.Aggregates;
 using ERP.Finance.Domain.AccountsReceivable.Enums;
 using ERP.Finance.Domain.AccountsReceivable.Events;
 using ERP.Finance.Domain.Shared.ValueObjects;
-using System;
 using ERP.Core.Exceptions;
 
 namespace ERP.Finance.Domain.AccountsReceivable.Aggregates;
 
 public class CashReceipt : AggregateRoot
 {
+    public Guid BusinessUnitId { get; set; }
     public Guid CustomerId { get; private set; } 
     public DateTime ReceiptDate { get; private set; }
     public Money TotalReceivedAmount { get; private set; }
@@ -42,7 +42,7 @@ public class CashReceipt : AggregateRoot
 
         // Event for initial GL posting and application workflow initiation
         AddDomainEvent(new UnappliedCashCreatedEvent(
-            this.Id, customerId, receivedAmount, cashAccountId, reference
+            this.Id, customerId, this.BusinessUnitId, receivedAmount, cashAccountId, reference
         ));
     }
 

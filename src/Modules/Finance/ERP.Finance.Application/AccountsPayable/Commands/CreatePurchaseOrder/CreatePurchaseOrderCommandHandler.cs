@@ -8,20 +8,12 @@ using System.Threading.Tasks;
 
 namespace ERP.Finance.Application.AccountsPayable.Commands.CreatePurchaseOrder;
 
-public class CreatePurchaseOrderCommandHandler : IRequestCommandHandler<CreatePurchaseOrderCommand, Guid>
+public class CreatePurchaseOrderCommandHandler(IPurchaseOrderRepository poRepository, IUnitOfWorkManager unitOfWork)
+    : IRequestCommandHandler<CreatePurchaseOrderCommand, Guid>
 {
-    private readonly IPurchaseOrderRepository _poRepository;
-    private readonly IUnitOfWorkManager _unitOfWork;
-
-    public CreatePurchaseOrderCommandHandler(IPurchaseOrderRepository poRepository, IUnitOfWorkManager unitOfWork)
-    {
-        _poRepository = poRepository;
-        _unitOfWork = unitOfWork;
-    }
-
     public async Task<Result<Guid>> Handle(CreatePurchaseOrderCommand command, CancellationToken cancellationToken)
     {
-        using var scope = _unitOfWork.Begin();
+        using var scope = unitOfWork.Begin();
 
         var poLines = command.Lines.Select(dto => 
             new PurchaseOrderLine(dto.ProductId, dto.Description, dto.Quantity, dto.UnitPrice))
@@ -29,7 +21,7 @@ public class CreatePurchaseOrderCommandHandler : IRequestCommandHandler<CreatePu
 
         var purchaseOrder = new PurchaseOrder(command.VendorId, command.OrderDate, poLines);
 
-        await _poRepository.AddAsync(purchaseOrder, cancellationToken);
+        await poRepository.AddAsync(purchaseOrder, cancellationToken);
         await scope.SaveChangesAsync(cancellationToken);
 
         return Result.Success(purchaseOrder.Id);

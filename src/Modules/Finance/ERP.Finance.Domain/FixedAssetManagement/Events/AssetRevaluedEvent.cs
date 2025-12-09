@@ -1,9 +1,11 @@
 using ERP.Core.Events;
 using ERP.Finance.Domain.Shared.ValueObjects;
+
 namespace ERP.Finance.Domain.FixedAssetManagement.Events;
 
 public record AssetRevaluedEvent(
     Guid AssetId,
+    Guid BusinessUnitId, // Added this
     DateTime RevaluationDate,
     Money OldAcquisitionCost,
     Money NewAcquisitionCost,

@@ -12,7 +12,7 @@ public class CreateCreditMemoCommandHandler(ICreditMemoRepository creditMemoRepo
     {
         using var scope = unitOfWork.Begin();
 
-        var creditMemo = new CreditMemo(command.VendorId, command.Amount, command.MemoDate, command.Reason);
+        var creditMemo = new CreditMemo(command.VendorId, command.BusinessUnitId, command.Amount, command.MemoDate, command.Reason);
 
         await creditMemoRepository.AddAsync(creditMemo, cancellationToken);
         await scope.SaveChangesAsync(cancellationToken);

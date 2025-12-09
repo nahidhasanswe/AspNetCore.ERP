@@ -81,6 +81,7 @@ public class FixedAsset : AggregateRoot
 
         AddDomainEvent(new AssetRevaluedEvent(
             this.Id,
+            this.BusinessUnitId, // Pass BusinessUnitId
             revaluationDate,
             oldAcquisitionCost,
             newAcquisitionCost,

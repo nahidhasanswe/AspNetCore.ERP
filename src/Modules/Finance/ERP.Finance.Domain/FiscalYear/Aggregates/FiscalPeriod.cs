@@ -7,6 +7,7 @@ namespace ERP.Finance.Domain.FiscalYear.Aggregates;
 
 public class FiscalPeriod : AggregateRoot
 {
+    public Guid BusinessUnitId { get; set; }
     public string Name { get; private set; } // e.g., "2026-01"
     public DateTime StartDate { get; private set; }
     public DateTime EndDate { get; private set; }
@@ -15,12 +16,13 @@ public class FiscalPeriod : AggregateRoot
     private FiscalPeriod() { }
 
     // Updated constructor to accept FiscalYearId
-    public FiscalPeriod(string name, DateTime startDate, DateTime endDate) : base(Guid.NewGuid())
+    public FiscalPeriod(string name, DateTime startDate, DateTime endDate, Guid businessUnitId) : base(Guid.NewGuid())
     {
         Name = name;
         StartDate = startDate;
         EndDate = endDate;
         Status = PeriodStatus.NeverOpened;
+        BusinessUnitId = businessUnitId;
     }
 
     public void Update(string newName, DateTime newStartDate, DateTime newEndDate)
