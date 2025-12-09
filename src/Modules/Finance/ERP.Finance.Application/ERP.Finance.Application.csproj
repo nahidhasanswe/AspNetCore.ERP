@@ -23,7 +23,7 @@
       <Folder Include="TaxManagement\DTOs\" />
       <Folder Include="TaxManagement\EventHandlers\" />
       <Folder Include="TaxManagement\Mappings\" />
-      <Folder Include="TaxManagement\Q ueries\" />
+      <Folder Include="TaxManagement\Queries\" />
     </ItemGroup>
 
     <ItemGroup>
