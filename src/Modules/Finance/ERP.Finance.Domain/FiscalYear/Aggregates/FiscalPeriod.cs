@@ -1,6 +1,7 @@
 using ERP.Core.Aggregates;
 using ERP.Core.Exceptions;
 using ERP.Finance.Domain.FiscalYear.Enums;
+using ERP.Finance.Domain.FiscalYear.Events;
 
 namespace ERP.Finance.Domain.FiscalYear.Aggregates;
 
@@ -13,6 +14,7 @@ public class FiscalPeriod : AggregateRoot
 
     private FiscalPeriod() { }
 
+    // Updated constructor to accept FiscalYearId
     public FiscalPeriod(string name, DateTime startDate, DateTime endDate) : base(Guid.NewGuid())
     {
         Name = name;
@@ -21,11 +23,24 @@ public class FiscalPeriod : AggregateRoot
         Status = PeriodStatus.NeverOpened;
     }
 
+    public void Update(string newName, DateTime newStartDate, DateTime newEndDate)
+    {
+        if (Status != PeriodStatus.NeverOpened && Status != PeriodStatus.Open)
+            throw new DomainException("Only periods that are NeverOpened or Open can be updated.");
+        if (newStartDate >= newEndDate)
+            throw new DomainException("Start date must be before end date.");
+
+        Name = newName;
+        StartDate = newStartDate;
+        EndDate = newEndDate;
+    }
+
     public void Open()
     {
         if (Status != PeriodStatus.NeverOpened)
             throw new DomainException("Period has already been opened or closed.");
         Status = PeriodStatus.Open;
+        AddDomainEvent(new FiscalPeriodOpenedEvent(this.Id, this.Name, this.StartDate, this.EndDate));
     }
 
     public void SoftClose()
@@ -33,6 +48,7 @@ public class FiscalPeriod : AggregateRoot
         if (Status != PeriodStatus.Open)
             throw new DomainException("Can only soft-close an open period.");
         Status = PeriodStatus.SoftClose;
+        AddDomainEvent(new FiscalPeriodSoftClosedEvent(this.Id, this.Name, this.StartDate, this.EndDate));
     }
 
     public void HardClose()
@@ -40,6 +56,7 @@ public class FiscalPeriod : AggregateRoot
         if (Status != PeriodStatus.SoftClose)
             throw new DomainException("Can only hard-close a soft-closed period.");
         Status = PeriodStatus.HardClose;
+        AddDomainEvent(new FiscalPeriodHardClosedEvent(this.Id, this.Name, this.StartDate, this.EndDate));
     }
 
     public void Reopen()
@@ -47,6 +64,7 @@ public class FiscalPeriod : AggregateRoot
         if (Status == PeriodStatus.HardClose) 
             throw new DomainException("Hard-closed periods cannot be reopened.");
         Status = PeriodStatus.Open;
+        AddDomainEvent(new FiscalPeriodReopenedEvent(this.Id, this.Name, this.StartDate, this.EndDate));
     }
 
     public void PostClosingEntry()
@@ -57,5 +75,6 @@ public class FiscalPeriod : AggregateRoot
         }
         // This method conceptually allows a 'closing' post and immediately hard-closes the period.
         Status = PeriodStatus.HardClose;
+        AddDomainEvent(new FiscalPeriodHardClosedEvent(this.Id, this.Name, this.StartDate, this.EndDate));
     }
 }

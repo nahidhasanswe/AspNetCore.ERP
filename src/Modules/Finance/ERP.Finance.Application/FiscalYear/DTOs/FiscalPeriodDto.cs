@@ -1,5 +1,3 @@
-using System;
-
 namespace ERP.Finance.Application.FiscalYear.DTOs;
 
 public record FiscalPeriodDto(
