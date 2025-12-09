@@ -1,6 +1,7 @@
 using ERP.Core.ValueObjects;
 using ERP.Finance.Domain.Shared.Enums;
 
+
 namespace ERP.Finance.Domain.FixedAssetManagement.Aggregates;
 
 public class DepreciationSchedule : ValueObject
@@ -41,29 +42,18 @@ public class DepreciationSchedule : ValueObject
         switch (Method)
         {
             case DepreciationMethod.StraightLine:
-                // Annual Depreciation = (Cost - Salvage) / Useful Life
                 depreciationAmount = depreciationBase / UsefulLifeYears;
                 break;
 
             case DepreciationMethod.DoubleDecliningBalance:
-                // Book Value = Cost - Accumulated Depreciation
                 decimal bookValue = acquisitionCost - accumulatedDepreciation;
-                
-                // Rate = (1 / Useful Life) * 2
                 decimal ddbRate = (1m / UsefulLifeYears) * 2m;
-                
-                // Depreciation = Book Value * Rate
                 depreciationAmount = bookValue * ddbRate;
                 break;
                 
             case DepreciationMethod.SumOfTheYearsDigits:
-                // Sum of Years = n * (n + 1) / 2
                 decimal sumOfYears = UsefulLifeYears * (UsefulLifeYears + 1m) / 2m;
-                
-                // Remaining Life = Useful Life - (Current Period - 1)
                 decimal remainingLife = UsefulLifeYears - (period - 1);
-                
-                // Depreciation = (Cost - Salvage) * (Remaining Life / Sum of Years)
                 depreciationAmount = depreciationBase * (remainingLife / sumOfYears);
                 break;
                 
@@ -79,24 +69,38 @@ public class DepreciationSchedule : ValueObject
     
     public decimal CalculateAnnualDepreciation(decimal acquisitionCost)
     {
-        if (Method == DepreciationMethod.StraightLine)
+        if (UsefulLifeYears <= 0) return 0m;
+        decimal depreciableBase = acquisitionCost - SalvageValue;
+        if (depreciableBase <= 0) return 0m;
+
+        switch (Method)
         {
-            if (UsefulLifeYears <= 0) return 0m;
-            
-            decimal depreciableBase = acquisitionCost - SalvageValue;
-            if (depreciableBase <= 0) return 0m;
-            
-            return depreciableBase / UsefulLifeYears;
+            case DepreciationMethod.StraightLine:
+                return depreciableBase / UsefulLifeYears;
+
+            case DepreciationMethod.DoubleDecliningBalance:
+                // For annual calculation, we need to know the current book value.
+                // This method is typically called for the *first* year's full depreciation.
+                // For subsequent years, CalculateDepreciationForPeriod is more appropriate.
+                // For simplicity, we'll calculate the first year's DDB here.
+                decimal ddbRate = (1m / UsefulLifeYears) * 2m;
+                return acquisitionCost * ddbRate;
+
+            case DepreciationMethod.SumOfTheYearsDigits:
+                // For annual calculation, we need to know the current period.
+                // For simplicity, we'll calculate the first year's SYD here.
+                decimal sumOfYears = UsefulLifeYears * (UsefulLifeYears + 1m) / 2m;
+                return depreciableBase * (UsefulLifeYears / sumOfYears);
+
+            default:
+                throw new NotSupportedException($"Depreciation method {Method} is not implemented.");
         }
-        
-        // Add logic for other methods (DD, SYD, etc.) here
-        throw new NotImplementedException($"Depreciation method {Method} is not yet implemented.");
     }
     
     protected override IEnumerable<object> GetEqualityComponents()
     {
         yield return Method;
         yield return UsefulLifeYears;
-        yield return SalvageValue; // Salvage value is critical to the schedule and should be part of equality
+        yield return SalvageValue;
     }
 }

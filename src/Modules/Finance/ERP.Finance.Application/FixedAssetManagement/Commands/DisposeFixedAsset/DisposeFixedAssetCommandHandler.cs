@@ -1,0 +1,32 @@
+using ERP.Core;
+using ERP.Core.Uow;
+using ERP.Finance.Domain.FixedAssetManagement.Aggregates;
+using MediatR;
+
+namespace ERP.Finance.Application.FixedAssetManagement.Commands.DisposeFixedAsset;
+
+public class DisposeFixedAssetCommandHandler(IFixedAssetRepository fixedAssetRepository, IUnitOfWorkManager unitOfWork)
+    : IRequestHandler<DisposeFixedAssetCommand, Result>
+{
+    public async Task<Result> Handle(DisposeFixedAssetCommand command, CancellationToken cancellationToken)
+    {
+        using var scope = unitOfWork.Begin();
+
+        var fixedAsset = await fixedAssetRepository.GetByIdAsync(command.AssetId, cancellationToken);
+        if (fixedAsset == null)
+        {
+            return Result.Failure("Fixed Asset not found.");
+        }
+
+        fixedAsset.Dispose(
+            command.DisposalDate,
+            command.Proceeds,
+            command.GainLossAccountId
+        );
+
+        await fixedAssetRepository.UpdateAsync(fixedAsset, cancellationToken);
+        await scope.SaveChangesAsync(cancellationToken);
+
+        return Result.Success();
+    }
+}

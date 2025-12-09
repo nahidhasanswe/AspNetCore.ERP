@@ -8,7 +8,7 @@ namespace ERP.Finance.Infrastructure.FixedAssetManagement;
 
 public class FixedAssetRepository(IDbContextProvider<FinanceDbContext> dbContextProvider) : EfRepository<FinanceDbContext, FixedAsset>(dbContextProvider), IFixedAssetRepository
 {
-    public async Task<IEnumerable<FixedAsset>> GetAllActiveAssetsAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<FixedAsset>> GetAllActiveAssetsAsync(CancellationToken cancellationToken)
     {
         return await Table
             .Where(asset => 
