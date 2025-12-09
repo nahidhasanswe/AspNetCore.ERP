@@ -246,6 +246,19 @@ public class CustomerInvoice : AggregateRoot
             ARControlAccountId: this.ARControlAccountId
         ));
     }
+
+    public void MarkAsOverdue()
+    {
+        if (Status == InvoiceStatus.Issued || Status == InvoiceStatus.PartiallyPaid)
+        {
+            Status = InvoiceStatus.Overdue;
+            // Optionally raise an event for InvoiceMarkedOverdueEvent
+        }
+        else
+        {
+            throw new DomainException($"Invoice cannot be marked overdue from status {Status}.");
+        }
+    }
     
     private void RecalculateTotal()
     {
