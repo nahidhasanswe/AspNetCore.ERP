@@ -1,14 +1,18 @@
 using ERP.Core;
 using ERP.Core.Uow;
 using ERP.Finance.Domain.Budgeting.Aggregates;
+using ERP.Finance.Domain.Budgeting.Service;
 using MediatR;
 
-namespace ERP.Finance.Application.Budgeting.Commands.UpdateBudget;
+namespace ERP.Finance.Application.Budgeting.Commands.ApproveBudget;
 
-public class UpdateBudgetCommandHandler(IBudgetRepository budgetRepository, IUnitOfWorkManager unitOfWork)
-    : IRequestHandler<UpdateBudgetCommand, Result>
+public class ApproveBudgetCommandHandler(
+    IBudgetRepository budgetRepository,
+    IBudgetApprovalService budgetApprovalService,
+    IUnitOfWorkManager unitOfWork)
+    : IRequestHandler<ApproveBudgetCommand, Result>
 {
-    public async Task<Result> Handle(UpdateBudgetCommand command, CancellationToken cancellationToken)
+    public async Task<Result> Handle(ApproveBudgetCommand command, CancellationToken cancellationToken)
     {
         using var scope = unitOfWork.Begin();
 
@@ -18,7 +22,7 @@ public class UpdateBudgetCommandHandler(IBudgetRepository budgetRepository, IUni
             return Result.Failure("Budget not found.");
         }
 
-        budget.Update(command.Name, command.FiscalPeriod, command.StartDate, command.EndDate, command.ParentBudgetId);
+        await budget.Approve(command.ApproverId, budgetApprovalService);
 
         await budgetRepository.UpdateAsync(budget, cancellationToken);
         await scope.SaveChangesAsync(cancellationToken);

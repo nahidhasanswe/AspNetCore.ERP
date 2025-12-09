@@ -11,4 +11,5 @@ public class UpdateBudgetCommand : IRequest<Result>
     public string FiscalPeriod { get; set; }
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
+    public Guid? ParentBudgetId { get; set; } // Added for hierarchy
 }

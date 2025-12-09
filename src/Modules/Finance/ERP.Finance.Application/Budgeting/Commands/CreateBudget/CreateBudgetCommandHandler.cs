@@ -29,7 +29,8 @@ public class CreateBudgetCommandHandler : IRequestCommandHandler<CreateBudgetCom
             command.Name,
             command.FiscalPeriod,
             command.StartDate,
-            command.EndDate
+            command.EndDate,
+            command.ParentBudgetId // Pass ParentBudgetId
         );
 
         foreach (var itemDto in command.Items)

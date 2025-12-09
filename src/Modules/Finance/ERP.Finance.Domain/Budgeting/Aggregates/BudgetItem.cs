@@ -35,6 +35,7 @@ public class BudgetItem : Entity
         CostCenterId = costCenterId;
     }
 
+    // Modified Update method to allow updating BudgetedAmount directly
     public void Update(Money newBudgetedAmount, string newPeriod, Guid? newCostCenterId)
     {
         if (newBudgetedAmount.Amount <= 0) throw new ArgumentException("Budgeted amount must be positive.");
@@ -43,6 +44,12 @@ public class BudgetItem : Entity
         BudgetedAmount = newBudgetedAmount;
         Period = newPeriod;
         CostCenterId = newCostCenterId;
+    }
+
+    // New method to adjust budgeted amount for transfers
+    internal void AdjustBudgetedAmount(Money adjustment)
+    {
+        BudgetedAmount = new Money(BudgetedAmount.Amount + adjustment.Amount, BudgetedAmount.Currency);
     }
     
     public Result Reserve(Money amount)
@@ -71,6 +78,4 @@ public class BudgetItem : Entity
         CommittedAmount = new Money(CommittedAmount.Amount - amount.Amount, amount.Currency);
         return Result.Success();
     }
-    
-    // Note: We do NOT track Actuals here. Actuals are read from the GL context.
 }

@@ -1,12 +1,14 @@
 using ERP.Core.Aggregates;
 using ERP.Core.Exceptions;
 using ERP.Finance.Domain.Budgeting.Events;
+using ERP.Finance.Domain.Budgeting.Service; // Added for IBudgetApprovalService
 using ERP.Finance.Domain.Shared.Enums;
 using ERP.Finance.Domain.Shared.ValueObjects;
 using ERP.Core;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks; // Added for async Approve method
 
 namespace ERP.Finance.Domain.Budgeting.Aggregates;
 
@@ -18,13 +20,17 @@ public class Budget : AggregateRoot
     public DateTime EndDate { get; private set; }
     public BudgetStatus Status { get; private set; }
     public Guid BusinessUnitId { get; private set; }
+    public Guid? ParentBudgetId { get; private set; } // New property for hierarchy
 
     private readonly List<BudgetItem> _items = new();
     public IReadOnlyCollection<BudgetItem> Items => _items.AsReadOnly();
 
+    private readonly List<Guid> _approverIds = new(); // For advanced approval workflow
+    public IReadOnlyCollection<Guid> ApproverIds => _approverIds.AsReadOnly();
+
     private Budget() { }
 
-    public Budget(Guid businessUnitId, string name, string fiscalYear, DateTime startDate, DateTime endDate) : base(Guid.NewGuid())
+    public Budget(Guid businessUnitId, string name, string fiscalYear, DateTime startDate, DateTime endDate, Guid? parentBudgetId = null) : base(Guid.NewGuid())
     {
         if (startDate >= endDate) throw new DomainException("Start date must be before end date.");
         
@@ -34,17 +40,19 @@ public class Budget : AggregateRoot
         EndDate = endDate.Date;
         Status = BudgetStatus.Draft;
         BusinessUnitId = businessUnitId;
+        ParentBudgetId = parentBudgetId;
     }
 
-    // Private constructor for creating revisions
-    private Budget(Guid businessUnitId, string name, string fiscalPeriod, DateTime startDate, DateTime endDate, IEnumerable<BudgetItem> items) : base(Guid.NewGuid())
+    // Private constructor for creating revisions or roll-forwards
+    private Budget(Guid businessUnitId, string name, string fiscalPeriod, DateTime startDate, DateTime endDate, IEnumerable<BudgetItem> items, Guid? parentBudgetId = null) : base(Guid.NewGuid())
     {
         Name = name;
         FiscalPeriod = fiscalPeriod;
         StartDate = startDate.Date;
         EndDate = endDate.Date;
-        Status = BudgetStatus.Draft; // Revisions start as Draft
+        Status = BudgetStatus.Draft; // Revisions/Roll-forwards start as Draft
         BusinessUnitId = businessUnitId;
+        ParentBudgetId = parentBudgetId;
         _items.AddRange(items.Select(item => new BudgetItem(item.AccountId, item.BudgetedAmount, item.Period, item.CostCenterId)));
     }
 
@@ -62,11 +70,37 @@ public class Budget : AggregateRoot
             FiscalPeriod,
             StartDate,
             EndDate,
-            revisedItems
+            revisedItems,
+            ParentBudgetId // Maintain parent relationship in revision
         );
     }
 
-    public void Update(string name, string fiscalPeriod, DateTime startDate, DateTime endDate)
+    public Budget RollForward(string newFiscalPeriod, DateTime newStartDate, DateTime newEndDate, decimal adjustmentFactor = 1.0m)
+    {
+        // Can roll forward from Approved or Archived budgets
+        if (Status != BudgetStatus.Approved && Status != BudgetStatus.Archived)
+            throw new InvalidOperationException("Only approved or archived budgets can be rolled forward.");
+        if (newStartDate >= newEndDate) throw new DomainException("New start date must be before new end date.");
+
+        var rolledForwardItems = Items.Select(item => new BudgetItem(
+            item.AccountId,
+            new Money(item.BudgetedAmount.Amount * adjustmentFactor, item.BudgetedAmount.Currency),
+            newFiscalPeriod, // Period should reflect the new fiscal period
+            item.CostCenterId
+        )).ToList();
+
+        return new Budget(
+            BusinessUnitId,
+            $"{Name} - {newFiscalPeriod}", // New name
+            newFiscalPeriod,
+            newStartDate,
+            newEndDate,
+            rolledForwardItems,
+            ParentBudgetId // Maintain parent relationship in roll-forward
+        );
+    }
+
+    public void Update(string name, string fiscalPeriod, DateTime startDate, DateTime endDate, Guid? parentBudgetId)
     {
         if (Status != BudgetStatus.Draft)
             throw new InvalidOperationException("Only draft budgets can be updated.");
@@ -76,6 +110,7 @@ public class Budget : AggregateRoot
         FiscalPeriod = fiscalPeriod;
         StartDate = startDate.Date;
         EndDate = endDate.Date;
+        ParentBudgetId = parentBudgetId;
     }
     
     public void AddItem(BudgetItem item)
@@ -124,14 +159,25 @@ public class Budget : AggregateRoot
         Status = BudgetStatus.PendingApproval;
     }
     
-    public void Approve()
+    public async Task Approve(Guid approverId, IBudgetApprovalService approvalService) // Modified to be async and take service
     {
         if (Status != BudgetStatus.Draft && Status != BudgetStatus.PendingApproval)
             throw new InvalidOperationException($"Budget cannot be approved from current state {Status}.");
-        
-        AddDomainEvent(new BudgetApprovedEvent(this.Id, this.BusinessUnitId, this.FiscalPeriod, this.Items));
-        
-        Status = BudgetStatus.Approved;
+
+        if (!_approverIds.Contains(approverId))
+        {
+            _approverIds.Add(approverId);
+        }
+
+        if (await approvalService.HasSufficientApproval(this, approverId))
+        {
+            Status = BudgetStatus.Approved;
+            AddDomainEvent(new BudgetApprovedEvent(this.Id, this.BusinessUnitId, this.FiscalPeriod, this.Items));
+        }
+        else
+        {
+            Status = BudgetStatus.PendingApproval; // Remain in pending if not fully approved
+        }
     }
 
     public void Reject()
@@ -192,10 +238,11 @@ public class Budget : AggregateRoot
             return Result.Failure("Transfer amount must be positive.");
         
         var fromItem = _items.FirstOrDefault(item => item.Id == fromBudgetItemId);
-        var toItem = _items.FirstOrDefault(item => item.Id == toBudgetItemId);
-
         if (fromItem == null) return Result.Failure($"Source budget item with ID {fromBudgetItemId} not found.");
+        
+        var toItem = _items.FirstOrDefault(item => item.Id == toBudgetItemId);
         if (toItem == null) return Result.Failure($"Destination budget item with ID {toBudgetItemId} not found.");
+        
         if (fromItem.BudgetedAmount.Currency != amount.Currency || toItem.BudgetedAmount.Currency != amount.Currency)
             return Result.Failure("Cannot transfer funds between different currencies.");
         if (fromItem.BudgetedAmount.Currency != toItem.BudgetedAmount.Currency)
@@ -206,8 +253,8 @@ public class Budget : AggregateRoot
             return Result.Failure("Insufficient available funds in the source budget item for transfer.");
 
         // Perform the transfer
-        fromItem.Update(new Money(fromItem.BudgetedAmount.Amount - amount.Amount, amount.Currency), fromItem.Period, fromItem.CostCenterId);
-        toItem.Update(new Money(toItem.BudgetedAmount.Amount + amount.Amount, amount.Currency), toItem.Period, toItem.CostCenterId);
+        fromItem.AdjustBudgetedAmount(new Money(-amount.Amount, amount.Currency)); // Decrease source
+        toItem.AdjustBudgetedAmount(new Money(amount.Amount, amount.Currency));    // Increase destination
 
         // Optionally, raise a domain event for BudgetFundsTransferredEvent
         return Result.Success();

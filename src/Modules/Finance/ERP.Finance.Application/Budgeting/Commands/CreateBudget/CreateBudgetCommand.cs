@@ -13,6 +13,7 @@ public class CreateBudgetCommand : IRequest<Result<Guid>>
     public string FiscalPeriod { get; set; }
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
+    public Guid? ParentBudgetId { get; set; } // Added for hierarchy
     public List<BudgetItemDto> Items { get; set; } = new();
 
     public class BudgetItemDto
