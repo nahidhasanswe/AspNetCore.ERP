@@ -3,10 +3,11 @@ using ERP.Core.Aggregates;
 using ERP.Finance.Domain.Encumbrance.Enums;
 using ERP.Finance.Domain.Encumbrance.Events;
 using ERP.Finance.Domain.Shared.ValueObjects;
+using System;
 
 namespace ERP.Finance.Domain.Encumbrance.Aggregates;
 
-public class Encumbrance : AggregateRoot
+public class Encumbrance : AuditableAggregateRoot
 {
     public Guid SourceTransactionId { get; private set; } // e.g., Purchase Requisition ID
     public Money Amount { get; private set; }            // The amount reserved/committed
@@ -56,7 +57,7 @@ public class Encumbrance : AggregateRoot
         if (Status != EncumbranceStatus.Open)
             throw new InvalidOperationException("Only open encumbrances can be released.");
         Status = EncumbranceStatus.Released;
-        // Add domain event for EncumbranceReleasedEvent
+        AddDomainEvent(new EncumbranceReleasedEvent(this.Id, this.Amount, this.GlAccountId, this.CostCenterId));
     }
 
     public void Liquidate(Guid actualTransactionId)
@@ -64,8 +65,33 @@ public class Encumbrance : AggregateRoot
         if (Status != EncumbranceStatus.Open && Status != EncumbranceStatus.Committed) // Assuming Committed is a status
             throw new InvalidOperationException("Only open or committed encumbrances can be liquidated.");
         Status = EncumbranceStatus.Liquidated;
-        // Add domain event for EncumbranceLiquidatedEvent
+        AddDomainEvent(new EncumbranceLiquidatedEvent(this.Id, this.Amount, this.GlAccountId, this.CostCenterId, actualTransactionId));
     }
-    
-    // ... (Methods for Close and Cancel)
+
+    public void Close()
+    {
+        if (Status != EncumbranceStatus.Open && Status != EncumbranceStatus.Committed)
+            throw new InvalidOperationException("Only open or committed encumbrances can be closed.");
+        Status = EncumbranceStatus.Closed;
+        AddDomainEvent(new EncumbranceClosedEvent(this.Id, this.Amount, this.GlAccountId, this.CostCenterId));
+    }
+
+    public void Cancel()
+    {
+        if (Status != EncumbranceStatus.Open && Status != EncumbranceStatus.Committed)
+            throw new InvalidOperationException("Only open or committed encumbrances can be cancelled.");
+        Status = EncumbranceStatus.Canceled;
+        AddDomainEvent(new EncumbranceCanceledEvent(this.Id, this.Amount, this.GlAccountId, this.CostCenterId));
+    }
+
+    public void Adjust(Money newAmount)
+    {
+        if (Status != EncumbranceStatus.Open && Status != EncumbranceStatus.Committed)
+            throw new InvalidOperationException("Only open or committed encumbrances can be adjusted.");
+        
+        var adjustmentAmount = new Money(newAmount.Amount - this.Amount.Amount, newAmount.Currency);
+        this.Amount = newAmount;
+        
+        AddDomainEvent(new EncumbranceAdjustedEvent(this.Id, adjustmentAmount, this.GlAccountId, this.CostCenterId));
+    }
 }
