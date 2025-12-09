@@ -1,6 +1,7 @@
 using ERP.Core.Aggregates;
 using ERP.Core.Exceptions;
 using ERP.Finance.Domain.AccountsPayable.ValueObjects;
+using ERP.Finance.Domain.Shared.ValueObjects;
 
 namespace ERP.Finance.Domain.AccountsPayable.Aggregates;
 

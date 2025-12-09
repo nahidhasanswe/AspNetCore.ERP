@@ -1,22 +1,28 @@
 using ERP.Core;
-using ERP.Core.Behaviors;
 using ERP.Core.Uow;
 using ERP.Finance.Domain.AccountsReceivable.Aggregates;
+using MediatR;
 using ERP.Finance.Domain.Shared.ValueObjects;
 
-namespace ERP.Finance.Application.AccountsReceivable.Commands.CreateCustomer;
+namespace ERP.Finance.Application.AccountsReceivable.Commands.UpdateCustomer;
 
-public class CreateCustomerCommandHandler(ICustomerRepository customerRepository, IUnitOfWorkManager unitOfWork)
-    : IRequestCommandHandler<CreateCustomerCommand, Guid>
+public class UpdateCustomerCommandHandler(ICustomerRepository customerRepository, IUnitOfWorkManager unitOfWork)
+    : IRequestHandler<UpdateCustomerCommand, Result>
 {
-    public async Task<Result<Guid>> Handle(CreateCustomerCommand command, CancellationToken cancellationToken)
+    public async Task<Result> Handle(UpdateCustomerCommand command, CancellationToken cancellationToken)
     {
         using var scope = unitOfWork.Begin();
+
+        var customer = await customerRepository.GetByIdAsync(command.CustomerId, cancellationToken);
+        if (customer == null)
+        {
+            return Result.Failure("Customer not found.");
+        }
         
         var address = new Address(command.BillingAddress.Street, command.BillingAddress.City, command.BillingAddress.State, command.BillingAddress.Country, command.BillingAddress.PostalCode);
         var contactInfo = new ContactInfo(command.ContactInfo.Phone, command.ContactInfo.Email);
 
-        var customer = Customer.Create(
+        customer.Update(
             command.Name,
             command.ContactEmail,
             address,
@@ -26,9 +32,9 @@ public class CreateCustomerCommandHandler(ICustomerRepository customerRepository
             command.ARControlAccountId
         );
 
-        await customerRepository.AddAsync(customer, cancellationToken);
+        await customerRepository.UpdateAsync(customer, cancellationToken);
         await scope.SaveChangesAsync(cancellationToken);
 
-        return Result.Success(customer.Id);
+        return Result.Success();
     }
 }

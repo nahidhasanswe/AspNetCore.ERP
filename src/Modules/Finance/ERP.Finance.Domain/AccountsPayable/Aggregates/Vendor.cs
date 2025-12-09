@@ -1,7 +1,7 @@
 using ERP.Core;
 using ERP.Core.Entities;
 using ERP.Finance.Domain.AccountsPayable.ValueObjects;
-using System;
+using ERP.Finance.Domain.Shared.ValueObjects;
 
 namespace ERP.Finance.Domain.AccountsPayable.Aggregates;
 

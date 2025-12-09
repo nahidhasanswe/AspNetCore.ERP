@@ -3,6 +3,7 @@ using ERP.Core.Behaviors;
 using ERP.Core.Uow;
 using ERP.Finance.Domain.AccountsPayable.Aggregates;
 using ERP.Finance.Domain.AccountsPayable.ValueObjects;
+using ERP.Finance.Domain.Shared.ValueObjects;
 using MediatR;
 
 namespace ERP.Finance.Application.AccountsPayable.Commands.UpdateVendor;

@@ -1,6 +1,6 @@
 using ERP.Core.ValueObjects;
 
-namespace ERP.Finance.Domain.AccountsPayable.ValueObjects;
+namespace ERP.Finance.Domain.Shared.ValueObjects;
 
 public class Address : ValueObject
 {
