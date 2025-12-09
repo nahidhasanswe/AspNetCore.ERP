@@ -9,6 +9,7 @@ namespace ERP.Finance.Domain.Encumbrance.Aggregates;
 
 public class Encumbrance : AuditableAggregateRoot
 {
+    public Guid BusinessUnitId { get; set; }
     public Guid SourceTransactionId { get; private set; } // e.g., Purchase Requisition ID
     public Money Amount { get; private set; }            // The amount reserved/committed
     public Guid GlAccountId { get; private set; }        // The budget line item account
@@ -29,7 +30,7 @@ public class Encumbrance : AuditableAggregateRoot
         CostCenterId = costCenterId;
         
         // Event for GL posting to a commitment ledger
-        AddDomainEvent(new EncumbranceCreatedEvent(this.Id, sourceTransactionId, amount, glAccountId, this.CostCenterId, this.Type));
+        AddDomainEvent(new EncumbranceCreatedEvent(this.Id, this.BusinessUnitId, sourceTransactionId, amount, glAccountId, this.CostCenterId, this.Type));
     }
 
     /// <summary>
@@ -47,7 +48,7 @@ public class Encumbrance : AuditableAggregateRoot
         this.Type = EncumbranceType.Committed;
         
         // Event for GL adjustment if the amount changed, and for notifying the Budget Read Model
-        AddDomainEvent(new EncumbranceConvertedToCommitmentEvent(this.Id, newAmount, GlAccountId, this.CostCenterId));
+        AddDomainEvent(new EncumbranceConvertedToCommitmentEvent(this.Id, this.BusinessUnitId, newAmount, GlAccountId, this.CostCenterId));
         
         return Result.Success();
     }

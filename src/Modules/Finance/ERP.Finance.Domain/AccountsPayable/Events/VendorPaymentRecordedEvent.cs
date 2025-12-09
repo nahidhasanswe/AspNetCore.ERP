@@ -6,10 +6,11 @@ namespace ERP.Finance.Domain.AccountsPayable.Events;
 public record VendorPaymentRecordedEvent(
     Guid InvoiceId,
     Guid VendorId,
+    Guid BusinessUnitId, // New property
     Money AmountPaid,
     string TransactionReference,
     DateTime PaymentDate,
-    Guid PaymentAccountId,// Account paid from,
+    Guid PaymentAccountId,
     Guid APControlAccountId,
     Guid? CostCenterId
 ) : IDomainEvent

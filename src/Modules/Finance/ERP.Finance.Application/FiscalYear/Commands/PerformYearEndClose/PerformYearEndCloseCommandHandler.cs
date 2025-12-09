@@ -46,7 +46,7 @@ public class PerformYearEndCloseCommandHandler(
      var accountBalances = await generalLedgerEntryRepository.GetAccountBalancesForPeriodAsync(period.StartDate, period.EndDate, cancellationToken);
      var balanceMap = accountBalances.ToDictionary(x => x.AccountId);
  
-     var closingEntry = new JournalEntry($"Year-End Closing Entry for {period.Name}", $"YEC-{period.Name}");
+     var closingEntry = new JournalEntry($"Year-End Closing Entry for {period.Name}", $"YEC-{period.Name}", retainedEarningsAccount.BusinessUnitId);
 
      decimal netIncomeLoss = 0;
 

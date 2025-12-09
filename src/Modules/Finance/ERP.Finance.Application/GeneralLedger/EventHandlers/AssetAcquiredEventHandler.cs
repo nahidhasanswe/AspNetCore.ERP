@@ -1,22 +1,11 @@
 using ERP.Finance.Application.GeneralLedger.Commands.CreateJournal;
 using ERP.Finance.Domain.FixedAssetManagement.Events;
 using MediatR;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace ERP.Finance.Application.GeneralLedger.EventHandlers;
 
-public class AssetAcquiredEventHandler : INotificationHandler<AssetAcquiredEvent>
+public class AssetAcquiredEventHandler(IMediator mediator) : INotificationHandler<AssetAcquiredEvent>
 {
-    private readonly IMediator _mediator;
-    // In a real system, you'd need a Cash/AP Control Account.
-
-    public AssetAcquiredEventHandler(IMediator mediator)
-    {
-        _mediator = mediator;
-    }
-
     public async Task Handle(AssetAcquiredEvent notification, CancellationToken cancellationToken)
     {
         // GL Entry for Asset Acquisition:
@@ -30,6 +19,7 @@ public class AssetAcquiredEventHandler : INotificationHandler<AssetAcquiredEvent
         {
             PostingDate = notification.AcquisitionDate,
             Description = $"Journal entry for acquisition of asset {notification.TagNumber} (ID: {notification.AssetId})",
+            BusinessUnitId = notification.BusinessUnitId, // Pass BusinessUnitId
             Lines = new List<CreateJournalEntryCommand.LedgerLineDto>
             {
                 // Debit Asset Account
@@ -53,6 +43,6 @@ public class AssetAcquiredEventHandler : INotificationHandler<AssetAcquiredEvent
             }
         };
 
-        await _mediator.Send(createJournalEntryCommand, cancellationToken);
+        await mediator.Send(createJournalEntryCommand, cancellationToken);
     }
 }

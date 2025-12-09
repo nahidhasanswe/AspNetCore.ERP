@@ -29,7 +29,8 @@ public class PaymentReceivedHandler(
 
         var entry = new JournalEntry(
             $"Cash Receipt for Invoice {notification.InvoiceId}", 
-            notification.Reference
+            notification.Reference,
+            notification.BusinessUnitId
         );
         
         var baseAmount = await currencyConverter.ConvertAsync(

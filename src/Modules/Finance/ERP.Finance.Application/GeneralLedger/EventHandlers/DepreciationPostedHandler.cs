@@ -1,10 +1,10 @@
-using ERP.Core.Uow;
 using ERP.Finance.Domain.FixedAssetManagement.Events;
 using ERP.Finance.Domain.FiscalYear.Aggregates;
 using ERP.Finance.Domain.GeneralLedger.Aggregates;
 using ERP.Finance.Domain.GeneralLedger.Services;
 using ERP.Finance.Domain.Shared.Currency;
 using MediatR;
+using ERP.Core.Uow;
 
 namespace ERP.Finance.Application.GeneralLedger.EventHandlers;
 
@@ -13,14 +13,14 @@ public class DepreciationPostedHandler(
     IUnitOfWorkManager unitOfWork,
     ICurrencyConversionService currencyConverter,
     IFiscalPeriodRepository fiscalPeriodRepository,
-    IAccountValidationService accountValidator
-    ) : INotificationHandler<DepreciationPostedEvent>
+    IAccountValidationService accountValidator)
+    : INotificationHandler<DepreciationPostedEvent>
 {
     private const string SystemBaseCurrency = "USD";
-    
+
     public async Task Handle(DepreciationPostedEvent notification, CancellationToken cancellationToken)
     {
-        var fiscalPeriod = await fiscalPeriodRepository.GetPeriodByDateAsync(notification.OccurredOn, cancellationToken);
+        var fiscalPeriod = await fiscalPeriodRepository.GetPeriodByDateAsync(notification.PeriodDate, cancellationToken);
         if (fiscalPeriod is null)
         {
             // Log error: Cannot post depreciation as no open fiscal period was found.
@@ -29,13 +29,14 @@ public class DepreciationPostedHandler(
 
         var entry = new JournalEntry(
             $"Monthly Depreciation for Asset {notification.AssetId}", 
-            $"DEP-{notification.PeriodDate.Year}-{notification.PeriodDate.Month}"
+            $"DEP-{notification.PeriodDate.Year}-{notification.PeriodDate.Month}",
+            notification.BusinessUnitId // Pass BusinessUnitId
         );
         
         var baseAmount = await currencyConverter.ConvertAsync(
             source: notification.Amount, // The Money object from the event
             targetCurrency: SystemBaseCurrency,
-            conversionDate: notification.OccurredOn
+            conversionDate: notification.PeriodDate
         );
         
         // Debit: Increase Expense (Depreciation Expense)

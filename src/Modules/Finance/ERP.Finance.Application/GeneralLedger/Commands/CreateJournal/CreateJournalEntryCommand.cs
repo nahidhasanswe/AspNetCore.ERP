@@ -5,6 +5,7 @@ namespace ERP.Finance.Application.GeneralLedger.Commands.CreateJournal;
 
 public class CreateJournalEntryCommand : IRequest<Result<Guid>>
 {
+    public Guid BusinessUnitId { get; set; }
     public string Description { get; set; }
     public string ReferenceNumber { get; set; }
     public DateTime PostingDate { get; set; }

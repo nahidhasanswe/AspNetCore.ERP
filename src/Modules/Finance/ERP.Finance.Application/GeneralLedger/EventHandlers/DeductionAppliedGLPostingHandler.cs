@@ -34,7 +34,8 @@ public class DeductionAppliedGlPostingHandler(
         
         var entry = new JournalEntry(
             $"Deduction Applied to Invoice: {notification.InvoiceId}. Reason Code: {notification.DeductionReasonCode}", 
-            $"{notification.InvoiceId}-{notification.DeductionReasonCode}-{notification.OccurredOn:yyyyMMdd}"
+            $"{notification.InvoiceId}-{notification.DeductionReasonCode}-{notification.OccurredOn:yyyyMMdd}",
+            notification.BusinessUnitId
         );
 
         var baseAmount = await currencyConverter.ConvertAsync(

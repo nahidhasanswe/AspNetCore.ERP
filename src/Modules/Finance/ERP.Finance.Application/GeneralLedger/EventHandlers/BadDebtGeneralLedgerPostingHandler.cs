@@ -34,7 +34,8 @@ public class BadDebtGeneralLedgerPostingHandler(
         // 1. Create Journal Entry
         var entry = new JournalEntry(
             $"Bad Debt Write-Off for Invoice: {notification.InvoiceId}. Reason: {notification.Reason}", 
-            $"{notification.InvoiceId}-WO-{notification.WriteOffDate:yyyyMMdd}"
+            $"{notification.InvoiceId}-WO-{notification.WriteOffDate:yyyyMMdd}",
+            notification.BusinessUnitId
         );
         
         // 2. Convert to Base Currency

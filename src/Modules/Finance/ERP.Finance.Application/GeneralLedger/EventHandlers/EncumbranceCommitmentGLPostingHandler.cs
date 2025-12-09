@@ -47,7 +47,8 @@ public class EncumbranceCommitmentGlPostingHandler(
 
         var entry = new JournalEntry(
             $"Encumbrance Adjustment/Reclassification: {notification.EncumbranceId}", 
-            notification.EncumbranceId.ToString()
+            notification.EncumbranceId.ToString(),
+            notification.BusinessUnitId
         );
 
         // Determine if it's a net increase (Debit) or net decrease (Credit)

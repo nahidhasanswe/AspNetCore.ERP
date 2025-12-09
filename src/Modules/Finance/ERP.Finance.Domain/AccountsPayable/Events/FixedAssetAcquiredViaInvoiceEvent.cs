@@ -7,6 +7,7 @@ namespace ERP.Finance.Domain.AccountsPayable.Events;
 public record FixedAssetAcquiredViaInvoiceEvent(
     Guid InvoiceId,
     Guid VendorId,
+    Guid BusinessUnitId, // New property
     string AssetTagNumber,
     string AssetDescription,
     DateTime AcquisitionDate,
@@ -18,7 +19,7 @@ public record FixedAssetAcquiredViaInvoiceEvent(
     int UsefulLifeYears,
     decimal SalvageValue,
     Guid? CostCenterId
-) : IDomainEvent
+)  : IDomainEvent
 {
     public DateTime OccurredOn { get; } = DateTime.UtcNow;
 }

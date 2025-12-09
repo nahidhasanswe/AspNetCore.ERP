@@ -1,11 +1,11 @@
 using ERP.Core.Events;
 using ERP.Finance.Domain.Shared.ValueObjects;
-using System;
 
 namespace ERP.Finance.Domain.FixedAssetManagement.Events;
 
 public record AssetDisposedEvent(
     Guid AssetId,
+    Guid BusinessUnitId, // New property
     DateTime DisposalDate,
     Money AcquisitionCost,
     decimal TotalAccumulatedDepreciation,
@@ -15,7 +15,7 @@ public record AssetDisposedEvent(
     Guid AccumulatedDepreciationAccountId,
     Guid GainLossAccountId, // GL Account for Gain/Loss on Disposal
     Guid? CostCenterId
-) : IDomainEvent
+)  : IDomainEvent
 {
     public DateTime OccurredOn { get; } = DateTime.UtcNow;
 }

@@ -6,6 +6,7 @@ namespace ERP.Finance.Domain.AccountsReceivable.Events;
 public record UnappliedCashCreatedEvent(
     Guid CashReceiptId,
     Guid CustomerId,
+    Guid BusinessUnitId,
     Money TotalReceivedAmount,
     Guid CashAccountId, // The GL account debited
     string TransactionReference

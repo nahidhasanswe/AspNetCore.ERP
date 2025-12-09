@@ -2,13 +2,12 @@ using ERP.Core;
 using ERP.Finance.Domain.AccountsPayable.Aggregates;
 using ERP.Finance.Domain.Shared.ValueObjects;
 using MediatR;
-using System;
-using System.Collections.Generic;
 
 namespace ERP.Finance.Application.AccountsPayable.Commands.CreateRecurringInvoice;
 
 public class CreateRecurringInvoiceCommand : IRequest<Result<Guid>>
 {
+    public Guid BusinessUnitId { get; set; }
     public Guid VendorId { get; set; }
     public RecurrenceInterval Interval { get; set; }
     public DateTime StartDate { get; set; }

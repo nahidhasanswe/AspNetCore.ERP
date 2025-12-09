@@ -1,10 +1,10 @@
-using ERP.Core.Uow;
 using ERP.Finance.Domain.AccountsPayable.Events;
 using ERP.Finance.Domain.FiscalYear.Aggregates;
 using ERP.Finance.Domain.GeneralLedger.Aggregates;
 using ERP.Finance.Domain.GeneralLedger.Services;
 using ERP.Finance.Domain.Shared.Currency;
 using MediatR;
+using ERP.Core.Uow;
 
 namespace ERP.Finance.Application.GeneralLedger.EventHandlers;
 
@@ -13,10 +13,10 @@ public class VendorInvoiceCancelledHandler(
     IUnitOfWorkManager unitOfWork,
     ICurrencyConversionService currencyConverter,
     IFiscalPeriodRepository fiscalPeriodRepository,
-    IAccountValidationService accountValidator
-    ) : INotificationHandler<VendorInvoiceCancelledEvent>
+    IAccountValidationService accountValidator)
+    : INotificationHandler<VendorInvoiceCancelledEvent>
 {
-    private const string SystemBaseCurrency = "USD"; 
+    private const string SystemBaseCurrency = "USD";
 
     public async Task Handle(VendorInvoiceCancelledEvent notification, CancellationToken cancellationToken)
     {
@@ -30,7 +30,8 @@ public class VendorInvoiceCancelledHandler(
         // 1. Create the GL Reversal Aggregate Root
         var entry = new JournalEntry(
             $"Reversal of Cancelled Vendor Invoice {notification.InvoiceId} - Reason: {notification.CancellationReason}", 
-            $"CANCEL-{notification.InvoiceId}"
+            $"CANCEL-{notification.InvoiceId}",
+            notification.BusinessUnitId // Pass BusinessUnitId
         );
         
         // 2. CRITICAL: Calculate the Base Amount for the entire reversal
@@ -80,6 +81,7 @@ public class VendorInvoiceCancelledHandler(
         entry.Post(fiscalPeriod, accountValidator);
 
         using var scope = unitOfWork.Begin();
+        
         await journalEntryRepository.AddAsync(entry, cancellationToken);
         await scope.SaveChangesAsync(cancellationToken);
     }

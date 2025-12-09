@@ -12,6 +12,7 @@ namespace ERP.Finance.Domain.AccountsReceivable.Aggregates;
 
 public class CustomerInvoice : AggregateRoot
 {
+    public Guid BusinessUnitId { get; set; }
     public Guid CustomerId { get; private set; }
     public DateTime IssueDate { get; private set; }
     public DateTime DueDate { get; private set; }
@@ -80,6 +81,7 @@ public class CustomerInvoice : AggregateRoot
         // Raise Event for GL (Debit AR, Credit Revenue)
         AddDomainEvent(new InvoiceIssuedEvent(
             this.Id, 
+            this.BusinessUnitId,
             this.TotalAmount, 
             this.ARControlAccountId,
             this.LineItems.Select(li => new CustomerInvoiceLineItemProjection(li.LineAmount, li.RevenueAccountId, li.Description, li.CostCenterId)).ToList(), // Corrected li.CostCenterId
@@ -300,6 +302,7 @@ public class CustomerInvoice : AggregateRoot
         
         AddDomainEvent(new PaymentReceivedEvent(
             this.Id, 
+            this.BusinessUnitId,
             paymentAmount, 
             paymentDate,
             transactionReference,
@@ -328,6 +331,7 @@ public class CustomerInvoice : AggregateRoot
         
         AddDomainEvent(new BadDebtWrittenOffEvent(
             InvoiceId: this.Id,
+            BusinessUnitId: this.BusinessUnitId,
             WriteOffAmount: writeOffAmount,
             WriteOffDate: writeOffDate,
             ARControlAccountId: this.ARControlAccountId, 
@@ -348,7 +352,7 @@ public class CustomerInvoice : AggregateRoot
             this.Status = InvoiceStatus.Closed;
 
         AddDomainEvent(new DeductionAppliedToInvoiceEvent(
-            this.Id, amount, reasonCode, this.ARControlAccountId, deductionExpenseAccountId
+            this.Id, amount, reasonCode, this.ARControlAccountId, deductionExpenseAccountId, this.BusinessUnitId
         ));
     }
 }

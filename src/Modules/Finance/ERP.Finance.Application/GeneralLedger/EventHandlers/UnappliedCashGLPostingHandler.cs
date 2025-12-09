@@ -34,7 +34,8 @@ public class UnappliedCashGlPostingHandler(
         // Create Journal Entry
         var entry = new JournalEntry(
             $"Cash Received (Unapplied) from Customer {notification.CustomerId}", 
-            notification.TransactionReference
+            notification.TransactionReference,
+            notification.BusinessUnitId
         );
         
         // Resolve Unapplied Cash GL Account ID

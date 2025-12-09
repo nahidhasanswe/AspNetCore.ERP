@@ -1,9 +1,5 @@
 using ERP.Core.Aggregates;
 using ERP.Finance.Domain.Shared.ValueObjects;
-using ERP.Finance.Domain.AccountsPayable.Enums;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace ERP.Finance.Domain.AccountsPayable.Aggregates;
 
@@ -16,6 +12,7 @@ public enum RecurrenceInterval
 
 public class RecurringInvoice : AggregateRoot
 {
+    public Guid BusinessUnitId  {get; private set; }
     public Guid VendorId { get; private set; }
     public RecurrenceInterval Interval { get; private set; }
     public DateTime StartDate { get; private set; }
@@ -28,12 +25,13 @@ public class RecurringInvoice : AggregateRoot
 
     private RecurringInvoice() { }
 
-    public static RecurringInvoice Create(Guid vendorId, RecurrenceInterval interval, DateTime startDate,
+    public static RecurringInvoice Create(Guid vendorId, Guid businessUnitId, RecurrenceInterval interval, DateTime startDate,
         DateTime? endDate, IEnumerable<RecurringInvoiceLine> lines)
     {
         var create = new RecurringInvoice
         {
             Id = Guid.NewGuid(),
+            BusinessUnitId = businessUnitId,
             VendorId = vendorId,
             Interval = interval,
             StartDate = startDate,
@@ -80,6 +78,7 @@ public class RecurringInvoice : AggregateRoot
 
         var newInvoice = VendorInvoice.CreateNonPOInvoice(
             VendorId,
+            this.BusinessUnitId,
             $"REC-{Id}-{generationDate:yyyyMMdd}",
             generationDate,
             dueDate,

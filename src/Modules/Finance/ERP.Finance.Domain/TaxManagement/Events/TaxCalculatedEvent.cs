@@ -15,7 +15,8 @@ public record TaxCalculatedEvent(
     Guid SourceControlAccountId,
     bool IsSalesTransaction, 
     Guid? CostCenterId,
-    string Reference
+    string Reference,
+    Guid BusinessUnitId
 ) : IDomainEvent
 {
     public DateTime OccurredOn { get; } = DateTime.UtcNow;

@@ -41,7 +41,8 @@ public class EncumbranceGlPostingHandler(
 
         var entry = new JournalEntry(
             $"Encumbrance created for Source: {notification.SourceTransactionId} ({notification.Type})", 
-            notification.SourceTransactionId.ToString()
+            notification.SourceTransactionId.ToString(),
+            notification.BusinessUnitId
         );
         
         // Note: For simplicity, currency conversion is omitted here, assuming encumbrance is posted in local currency.

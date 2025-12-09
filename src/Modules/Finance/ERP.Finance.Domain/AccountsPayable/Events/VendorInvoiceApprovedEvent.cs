@@ -1,18 +1,17 @@
 using ERP.Core.Events;
 using ERP.Finance.Domain.Shared.ValueObjects;
-using System;
-using System.Collections.Generic;
 
 namespace ERP.Finance.Domain.AccountsPayable.Events;
 
 public record VendorInvoiceApprovedEvent(
     Guid InvoiceId,
     Guid VendorId,
+    Guid BusinessUnitId, // New property
     Money TotalAmount,
     DateTime ApprovalDate,
-    Guid APControlAccountId, // Added this
+    Guid APControlAccountId,
     IEnumerable<InvoiceLineItemProjection> LineItems
-) : IDomainEvent
+)  : IDomainEvent
 {
     public DateTime OccurredOn { get; } = DateTime.UtcNow;
 }

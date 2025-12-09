@@ -9,6 +9,7 @@ namespace ERP.Finance.Application.FixedAssetManagement.Commands.CreateFixedAsset
 
 public class CreateFixedAssetCommand : IRequest<Result<Guid>>
 {
+    public Guid BusinessUnitId { get; set; } // New property
     public string TagNumber { get; set; }
     public string Description { get; set; }
     public DateTime AcquisitionDate { get; set; }

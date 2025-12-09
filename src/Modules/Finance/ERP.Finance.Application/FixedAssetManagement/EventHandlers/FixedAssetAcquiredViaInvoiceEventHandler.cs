@@ -2,6 +2,8 @@ using ERP.Finance.Application.FixedAssetManagement.Commands.CreateFixedAsset;
 using ERP.Finance.Domain.AccountsPayable.Events; // Event from AP module
 using MediatR;
 using Microsoft.Extensions.Logging;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace ERP.Finance.Application.FixedAssetManagement.EventHandlers;
 
@@ -12,6 +14,7 @@ public class FixedAssetAcquiredViaInvoiceEventHandler(IMediator mediator, ILogge
     {
         var createAssetCommand = new CreateFixedAssetCommand
         {
+            BusinessUnitId = notification.BusinessUnitId, // Pass BusinessUnitId
             TagNumber = notification.AssetTagNumber,
             Description = notification.AssetDescription,
             AcquisitionDate = notification.AcquisitionDate,

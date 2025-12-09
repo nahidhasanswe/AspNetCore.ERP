@@ -2,9 +2,6 @@ using ERP.Core;
 using ERP.Core.Behaviors;
 using ERP.Core.Uow;
 using ERP.Finance.Domain.FixedAssetManagement.Aggregates;
-using MediatR;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace ERP.Finance.Application.FixedAssetManagement.Commands.CreateFixedAsset;
 
@@ -22,6 +19,7 @@ public class CreateFixedAssetCommandHandler(IFixedAssetRepository fixedAssetRepo
         );
 
         var fixedAsset = new FixedAsset(
+            command.BusinessUnitId,
             command.TagNumber,
             command.Description,
             command.AcquisitionCost,

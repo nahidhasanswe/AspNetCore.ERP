@@ -6,6 +6,7 @@ namespace ERP.Finance.Domain.Encumbrance.Events;
 
 public record EncumbranceCreatedEvent(
     Guid EncumbranceId,
+    Guid BusinessUnitId,
     Guid SourceTransactionId,
     Money Amount,
     Guid GlAccountId,

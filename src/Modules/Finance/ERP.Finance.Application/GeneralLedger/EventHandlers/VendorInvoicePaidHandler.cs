@@ -31,7 +31,8 @@ public class VendorInvoicePaidHandler(
         // 1. Create the GL Aggregate Root
         var entry = new JournalEntry(
             $"Payment for Vendor Invoice {notification.InvoiceId}", 
-            notification.TransactionReference
+            notification.TransactionReference,
+            notification.BusinessUnitId
         );
         
         Guid cashAccountId = notification.PaymentAccountId; 

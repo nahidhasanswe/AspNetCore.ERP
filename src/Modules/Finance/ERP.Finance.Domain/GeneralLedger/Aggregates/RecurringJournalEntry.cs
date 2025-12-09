@@ -4,6 +4,7 @@ namespace ERP.Finance.Domain.GeneralLedger.Aggregates;
 
 public class RecurringJournalEntry : AggregateRoot
 {
+    public Guid BusinessUnitId { get; set; }
     public string Description { get; private set; }
     public string ReferenceNumber { get; private set; }
     public DateTime StartDate { get; private set; }
@@ -39,6 +40,6 @@ public class RecurringJournalEntry : AggregateRoot
     // Method to create a JournalEntry from the RecurringJournalEntry
     public JournalEntry CreateJournalEntry()
     {
-        return new JournalEntry(Description, ReferenceNumber);
+        return new JournalEntry(Description, ReferenceNumber, BusinessUnitId);
     }
 }

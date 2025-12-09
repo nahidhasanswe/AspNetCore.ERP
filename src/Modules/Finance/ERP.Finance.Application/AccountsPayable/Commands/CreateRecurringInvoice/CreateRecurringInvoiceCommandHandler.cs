@@ -24,6 +24,7 @@ public class CreateRecurringInvoiceCommandHandler(
 
         var recurringInvoice = RecurringInvoice.Create(
             command.VendorId,
+            command.BusinessUnitId,
             command.Interval,
             command.StartDate,
             command.EndDate,

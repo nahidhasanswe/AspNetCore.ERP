@@ -5,6 +5,7 @@ namespace ERP.Finance.Domain.AccountsReceivable.Events;
 
 public record BadDebtWrittenOffEvent(
     Guid InvoiceId,
+    Guid BusinessUnitId,
     Money WriteOffAmount,
     DateTime WriteOffDate,
     Guid ARControlAccountId,        // The account to be Credited (Asset decrease)

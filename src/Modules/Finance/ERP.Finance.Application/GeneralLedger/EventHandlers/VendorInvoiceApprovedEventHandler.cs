@@ -1,11 +1,23 @@
 using ERP.Finance.Application.GeneralLedger.Commands.CreateJournal;
 using ERP.Finance.Domain.AccountsPayable.Events;
 using MediatR;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace ERP.Finance.Application.GeneralLedger.EventHandlers;
 
-public class VendorInvoiceApprovedEventHandler(IMediator mediator) : INotificationHandler<VendorInvoiceApprovedEvent>
+public class VendorInvoiceApprovedEventHandler : INotificationHandler<VendorInvoiceApprovedEvent>
 {
+    private readonly IMediator _mediator;
+
+    public VendorInvoiceApprovedEventHandler(IMediator mediator)
+    {
+        _mediator = mediator;
+    }
+
     public async Task Handle(VendorInvoiceApprovedEvent notification, CancellationToken cancellationToken)
     {
         var ledgerLines = new List<CreateJournalEntryCommand.LedgerLineDto>();
@@ -36,9 +48,10 @@ public class VendorInvoiceApprovedEventHandler(IMediator mediator) : INotificati
         {
             PostingDate = notification.ApprovalDate,
             Description = $"Journal entry for approved invoice {notification.InvoiceId}",
+            BusinessUnitId = notification.BusinessUnitId, // Pass BusinessUnitId
             Lines = ledgerLines
         };
 
-        await mediator.Send(createJournalEntryCommand, cancellationToken);
+        await _mediator.Send(createJournalEntryCommand, cancellationToken);
     }
 }

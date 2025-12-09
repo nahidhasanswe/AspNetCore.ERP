@@ -15,6 +15,7 @@ namespace ERP.Finance.Domain.AccountsPayable.Aggregates;
 
 public class VendorInvoice : AggregateRoot
 {
+    public Guid BusinessUnitId { get; private set; } // New property
     public Guid VendorId { get; private set; }
     public DateTime InvoiceDate { get; private set; }
     public DateTime DueDate { get; private set; }
@@ -39,8 +40,9 @@ public class VendorInvoice : AggregateRoot
 
     private VendorInvoice() { }
     
-    private VendorInvoice(Guid vendorId, string invoiceNumber, DateTime invoiceDate, DateTime dueDate, Guid apControlAccountId, Guid? costCenterId, IEnumerable<InvoiceLineItem> lineItems) : base(Guid.NewGuid())
+    private VendorInvoice(Guid businessUnitId, Guid vendorId, string invoiceNumber, DateTime invoiceDate, DateTime dueDate, Guid apControlAccountId, Guid? costCenterId, IEnumerable<InvoiceLineItem> lineItems) : base(Guid.NewGuid())
     {
+        BusinessUnitId = businessUnitId; // Set new property
         VendorId = vendorId;
         InvoiceNumber = invoiceNumber;
         InvoiceDate = invoiceDate;
@@ -54,15 +56,31 @@ public class VendorInvoice : AggregateRoot
         RecalculateTotal();
     }
     
-    public static VendorInvoice CreateNonPOInvoice(Guid vendorId, string invoiceNumber, DateTime invoiceDate, DateTime dueDate, Guid apControlAccountId, Guid? costCenterId, IEnumerable<InvoiceLineItem> lineItems)
+    public static VendorInvoice CreateNonPOInvoice(Guid businessUnitId, Guid vendorId, string invoiceNumber, DateTime invoiceDate, DateTime dueDate, Guid apControlAccountId, Guid? costCenterId, IEnumerable<InvoiceLineItem> lineItems)
     {
-        return new VendorInvoice(vendorId, invoiceNumber, invoiceDate, dueDate, apControlAccountId, costCenterId, lineItems);
+        return new VendorInvoice(businessUnitId, vendorId, invoiceNumber, invoiceDate, dueDate, apControlAccountId, costCenterId, lineItems);
     }
     
-    public static VendorInvoice CreateFromPO(Guid purchaseOrderId, string invoiceNumber, DateTime invoiceDate, DateTime dueDate, Guid apControlAccountId, IEnumerable<InvoiceLineItem> lineItems)
+    public static VendorInvoice CreateFromPO(Guid businessUnitId, Guid purchaseOrderId, string invoiceNumber, DateTime invoiceDate, DateTime dueDate, Guid apControlAccountId, IEnumerable<InvoiceLineItem> lineItems)
     {
-        // ... (existing PO constructor logic)
-        return new VendorInvoice(); // Simplified for brevity
+        // For PO invoices, the vendor is derived from the PO.
+        // We'd typically load the PO here to get the VendorId.
+        // For simplicity, we'll assume the caller provides it implicitly for now.
+        var poInvoice = new VendorInvoice
+        {
+            Id = Guid.NewGuid(),
+            BusinessUnitId = businessUnitId, // Set new property
+            PurchaseOrderId = purchaseOrderId,
+            InvoiceNumber = invoiceNumber,
+            InvoiceDate = invoiceDate,
+            DueDate = dueDate,
+            APControlAccountId = apControlAccountId,
+            Status = InvoiceStatus.Submitted,
+            MatchingStatus = InvoiceMatchingStatus.NotMatched
+        };
+        poInvoice._lineItems.AddRange(lineItems);
+        poInvoice.RecalculateTotal();
+        return poInvoice;
     }
 
     public void MarkAsFixedAssetAcquisition(
@@ -88,6 +106,7 @@ public class VendorInvoice : AggregateRoot
         AddDomainEvent(new FixedAssetAcquiredViaInvoiceEvent(
             this.Id,
             this.VendorId,
+            this.BusinessUnitId,
             assetTagNumber,
             assetDescription,
             acquisitionDate,
@@ -115,6 +134,7 @@ public class VendorInvoice : AggregateRoot
         AddDomainEvent(new VendorInvoiceCreditAppliedEvent(
             Id,
             creditMemo.Id,
+            this.BusinessUnitId,
             amountToApply,
             DateTime.UtcNow,
             APControlAccountId
@@ -143,6 +163,7 @@ public class VendorInvoice : AggregateRoot
             AddDomainEvent(new VendorInvoiceApprovedEvent(
                 Id,
                 VendorId,
+                this.BusinessUnitId,
                 TotalAmount,
                 DateTime.UtcNow,
                 APControlAccountId,
@@ -245,6 +266,7 @@ public class VendorInvoice : AggregateRoot
         AddDomainEvent(new VendorPaymentRecordedEvent(
             Id,
             VendorId,
+            this.BusinessUnitId,
             paymentAmount,
             transactionReference,
             paymentDate,
@@ -280,6 +302,7 @@ public class VendorInvoice : AggregateRoot
         AddDomainEvent(new VendorInvoiceCancelledEvent(
                 this.Id, 
                 this.VendorId, 
+                this.BusinessUnitId,
                 reason,
                 DateTime.UtcNow,
                 this.TotalAmount,

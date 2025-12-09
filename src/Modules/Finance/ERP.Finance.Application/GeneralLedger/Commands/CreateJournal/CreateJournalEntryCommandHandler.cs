@@ -30,7 +30,7 @@ public class CreateJournalEntryCommandHandler(
             return Result.Failure<Guid>($"No fiscal period found for date {command.PostingDate.ToShortDateString()}. The Post method will validate if it is open.");
         
         // 1. Create the Aggregate Root
-        var entry = new JournalEntry(command.Description, command.ReferenceNumber);
+        var entry = new JournalEntry(command.Description, command.ReferenceNumber, command.BusinessUnitId);
     
         // 2. Map DTOs to Domain Objects and add to the Aggregate
         foreach (var lineDto in command.Lines)

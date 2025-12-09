@@ -32,7 +32,8 @@ public class TaxCalculatedHandler(
 
         var entry = new JournalEntry(
             $"Tax liability from Source: {notification.SourceTransactionId}", 
-            notification.Reference // Use the Reference from the event
+            notification.Reference,
+            notification.BusinessUnitId
         );
 
         Guid arApControlAccountId = notification.SourceControlAccountId;

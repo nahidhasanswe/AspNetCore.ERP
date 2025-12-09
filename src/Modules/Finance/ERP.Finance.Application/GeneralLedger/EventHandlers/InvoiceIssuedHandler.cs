@@ -30,7 +30,8 @@ public class InvoiceIssuedHandler(
 
         var entry = new JournalEntry(
             $"Accrual for Customer Invoice {notification.InvoiceId}", 
-            notification.InvoiceId.ToString()
+            notification.InvoiceId.ToString(),
+            notification.BusinessUnitId
         );
         
         var baseAmount = await currencyConverter.ConvertAsync(

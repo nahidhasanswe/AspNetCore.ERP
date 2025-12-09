@@ -60,7 +60,8 @@ public class CalculateAndRecordTaxCommandHandler(
             command.SourceControlAccountId,
             command.IsSalesTransaction,
             command.CostCenterId,
-            command.Reference
+            command.Reference,
+            command.BusinessUnitId
         );
 
         // Publish the event directly through Mediator

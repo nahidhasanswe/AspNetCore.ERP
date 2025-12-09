@@ -8,6 +8,7 @@ namespace ERP.Finance.Domain.GeneralLedger.Aggregates;
 
 public class JournalEntry : AggregateRoot
 {
+    public Guid BusinessUnitId { get; set; }
     public DateTime PostingDate { get; private set; }
     public string Description { get; private set; }
     public string ReferenceNumber { get; private set; }
@@ -18,12 +19,13 @@ public class JournalEntry : AggregateRoot
 
     private JournalEntry() { } 
 
-    public JournalEntry(string description, string referenceNumber) : base(Guid.NewGuid())
+    public JournalEntry(string description, string referenceNumber, Guid businessUnitId) : base(Guid.NewGuid())
     {
         Description = description;
         ReferenceNumber = referenceNumber;
         IsPosted = false;
-        PostingDate = default; // Will be set on Post()
+        PostingDate = default; 
+        
     }
 
     public void AddLine(LedgerLine line)

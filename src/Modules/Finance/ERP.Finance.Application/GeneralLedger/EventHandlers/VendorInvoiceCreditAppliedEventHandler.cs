@@ -28,6 +28,7 @@ public class VendorInvoiceCreditAppliedEventHandler : INotificationHandler<Vendo
         {
             PostingDate = notification.AppliedDate,
             Description = $"Applied credit memo {notification.CreditMemoId} to invoice {notification.InvoiceId}",
+            BusinessUnitId = notification.BusinessUnitId, // Pass BusinessUnitId
             Lines = new List<CreateJournalEntryCommand.LedgerLineDto>
             {
                 // 1. Debit the Accounts Payable control account to reduce liability

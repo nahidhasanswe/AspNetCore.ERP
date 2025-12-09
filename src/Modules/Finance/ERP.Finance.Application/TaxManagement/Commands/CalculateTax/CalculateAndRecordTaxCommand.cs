@@ -14,6 +14,7 @@ public class CalculateAndRecordTaxCommand : IRequestCommand<bool>
     public Guid SourceTransactionId { get; set; } 
     public bool IsSalesTransaction { get; set; }
     public Guid? CostCenterId { get; set; }
+    public Guid BusinessUnitId { get; set; }
     
     public Guid SourceControlAccountId { get; set; }
     public string Reference { get; set; } // Added this property

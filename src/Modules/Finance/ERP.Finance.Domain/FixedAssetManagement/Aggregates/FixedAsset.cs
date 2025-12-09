@@ -3,11 +3,13 @@ using ERP.Core.Exceptions;
 using ERP.Finance.Domain.FixedAssetManagement.Enums;
 using ERP.Finance.Domain.FixedAssetManagement.Events;
 using ERP.Finance.Domain.Shared.ValueObjects;
+using System;
 
 namespace ERP.Finance.Domain.FixedAssetManagement.Aggregates;
 
 public class FixedAsset : AggregateRoot
 {
+    public Guid BusinessUnitId { get; private set; } // New property
     public string TagNumber { get; private set; }
     public string Description { get; private set; }
     public DateTime AcquisitionDate { get; private set; }
@@ -24,12 +26,13 @@ public class FixedAsset : AggregateRoot
 
     private FixedAsset() { }
 
-    public FixedAsset(string tagNumber, string description, Money cost, DateTime date, 
+    public FixedAsset(Guid businessUnitId, string tagNumber, string description, Money cost, DateTime date, 
                       Guid assetId, Guid expenseId, Guid accumulatedId, DepreciationSchedule schedule, Guid? costCenterId, string location) 
                       : base(Guid.NewGuid())
     {
         if (cost.Amount <= 0) throw new DomainException("Acquisition cost must be positive.");
         
+        BusinessUnitId = businessUnitId; // Set new property
         TagNumber = tagNumber;
         Description = description;
         AcquisitionCost = cost;
@@ -55,6 +58,7 @@ public class FixedAsset : AggregateRoot
         AccumulatedDepreciationAccountId = accumulatedDepreciationAccountId;
         CostCenterId = costCenterId;
         Location = location;
+        // BusinessUnitId is not updated via this method, as it's typically immutable for an asset.
         // Optionally raise an AssetUpdatedEvent
     }
 
@@ -145,6 +149,7 @@ public class FixedAsset : AggregateRoot
 
         AddDomainEvent(new AssetDisposedEvent(
             this.Id,
+            this.BusinessUnitId,
             disposalDate,
             AcquisitionCost,
             TotalAccumulatedDepreciation,
@@ -209,6 +214,7 @@ public class FixedAsset : AggregateRoot
         // 3. Raise Domain Event for GL posting
         AddDomainEvent(new DepreciationPostedEvent(
             this.Id,
+            this.BusinessUnitId,
             depreciationAmount,
             periodDate,
             this.DepreciationExpenseAccountId,

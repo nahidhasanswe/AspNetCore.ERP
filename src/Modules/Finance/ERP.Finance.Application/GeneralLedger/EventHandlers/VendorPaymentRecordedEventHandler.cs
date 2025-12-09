@@ -1,17 +1,29 @@
 using ERP.Finance.Application.GeneralLedger.Commands.CreateJournal;
 using ERP.Finance.Domain.AccountsPayable.Events;
 using MediatR;
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace ERP.Finance.Application.GeneralLedger.EventHandlers;
 
-public class VendorPaymentRecordedEventHandler(IMediator mediator) : INotificationHandler<VendorPaymentRecordedEvent>
+public class VendorPaymentRecordedEventHandler : INotificationHandler<VendorPaymentRecordedEvent>
 {
+    private readonly IMediator _mediator;
+
+    public VendorPaymentRecordedEventHandler(IMediator mediator)
+    {
+        _mediator = mediator;
+    }
+
     public async Task Handle(VendorPaymentRecordedEvent notification, CancellationToken cancellationToken)
     {
         var createJournalEntryCommand = new CreateJournalEntryCommand
         {
             PostingDate = notification.PaymentDate,
             Description = $"Record payment for invoice {notification.InvoiceId} via {notification.TransactionReference}",
+            BusinessUnitId = notification.BusinessUnitId, // Pass BusinessUnitId
             Lines = new List<CreateJournalEntryCommand.LedgerLineDto>
             {
                 // 1. Debit the Accounts Payable control account to reduce liability
@@ -34,6 +46,6 @@ public class VendorPaymentRecordedEventHandler(IMediator mediator) : INotificati
             }
         };
 
-        await mediator.Send(createJournalEntryCommand, cancellationToken);
+        await _mediator.Send(createJournalEntryCommand, cancellationToken);
     }
 }

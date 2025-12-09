@@ -1,11 +1,13 @@
 using ERP.Core.Events;
 using ERP.Finance.Domain.Shared.ValueObjects;
 
+
 namespace ERP.Finance.Domain.AccountsPayable.Events;
 
 public record VendorInvoiceCreditAppliedEvent(
     Guid InvoiceId,
     Guid CreditMemoId,
+    Guid BusinessUnitId, // New property
     Money AmountApplied,
     DateTime AppliedDate,
     Guid APControlAccountId

@@ -5,6 +5,7 @@ namespace ERP.Finance.Domain.AccountsReceivable.Events;
 
 public record PaymentReceivedEvent(
     Guid InvoiceId,
+    Guid BusinessUnitId,
     Money AmountReceived,
     DateTime PaymentDate,
     string Reference,

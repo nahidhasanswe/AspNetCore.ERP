@@ -8,7 +8,8 @@ public record DeductionAppliedToInvoiceEvent(
     Money DeductionAmount,
     string DeductionReasonCode,
     Guid ARControlAccountId, // The AR account to be credited
-    Guid DeductionExpenseAccountId // The Expense/Discount account to be debited
+    Guid DeductionExpenseAccountId,
+    Guid BusinessUnitId
 ) : IDomainEvent
 {
     public DateTime OccurredOn { get; } = DateTime.UtcNow;

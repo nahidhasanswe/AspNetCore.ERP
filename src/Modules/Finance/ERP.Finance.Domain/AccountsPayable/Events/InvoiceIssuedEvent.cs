@@ -6,6 +6,7 @@ namespace ERP.Finance.Domain.Events;
 
 public record InvoiceIssuedEvent(
     Guid InvoiceId,
+    Guid BusinessUnitId,
     Money Amount,
     Guid ARControlAccountId,
     IEnumerable<CustomerInvoiceLineItemProjection> LineItems,
