@@ -4,6 +4,7 @@ using ERP.Finance.Domain.AccountsReceivable.Enums;
 using ERP.Finance.Domain.AccountsReceivable.Events;
 using ERP.Finance.Domain.Shared.ValueObjects;
 using System;
+using ERP.Core.Exceptions;
 
 namespace ERP.Finance.Domain.AccountsReceivable.Aggregates;
 
@@ -54,6 +55,36 @@ public class CashReceipt : AggregateRoot
     {
         var create = new CashReceipt(customerId, receiptDate, receivedAmount, reference, cashAccountId);
         return create;
+    }
+
+    public void Update(DateTime newReceiptDate, Money newReceivedAmount, string newTransactionReference, Guid newCashAccountId)
+    {
+        if (Status != ReceiptStatus.Unapplied)
+            throw new DomainException("Only unapplied cash receipts can be updated.");
+        if (newReceivedAmount.Amount < TotalAppliedAmount.Amount)
+            throw new DomainException("New received amount cannot be less than already applied amount.");
+
+        ReceiptDate = newReceiptDate;
+        TotalReceivedAmount = newReceivedAmount;
+        TransactionReference = newTransactionReference;
+        CashAccountId = newCashAccountId;
+    }
+
+    public void Cancel()
+    {
+        if (Status != ReceiptStatus.Unapplied)
+            throw new DomainException("Only unapplied cash receipts can be cancelled.");
+        
+        Status = ReceiptStatus.Cancelled;
+        // Raise event for GL reversal of the initial UnappliedCashCreatedEvent
+        AddDomainEvent(new CashReceiptCancelledEvent(
+            this.Id,
+            this.CustomerId,
+            this.TotalReceivedAmount,
+            this.CashAccountId,
+            this.TransactionReference,
+            DateTime.UtcNow
+        ));
     }
 
     /// <summary>
