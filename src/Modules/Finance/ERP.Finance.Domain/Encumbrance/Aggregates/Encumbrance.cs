@@ -50,6 +50,22 @@ public class Encumbrance : AggregateRoot
         
         return Result.Success();
     }
+
+    public void Release()
+    {
+        if (Status != EncumbranceStatus.Open)
+            throw new InvalidOperationException("Only open encumbrances can be released.");
+        Status = EncumbranceStatus.Released;
+        // Add domain event for EncumbranceReleasedEvent
+    }
+
+    public void Liquidate(Guid actualTransactionId)
+    {
+        if (Status != EncumbranceStatus.Open && Status != EncumbranceStatus.Committed) // Assuming Committed is a status
+            throw new InvalidOperationException("Only open or committed encumbrances can be liquidated.");
+        Status = EncumbranceStatus.Liquidated;
+        // Add domain event for EncumbranceLiquidatedEvent
+    }
     
     // ... (Methods for Close and Cancel)
 }

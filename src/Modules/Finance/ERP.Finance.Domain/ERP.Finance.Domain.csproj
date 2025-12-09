@@ -10,7 +10,6 @@
       <Folder Include="AccountsPayable\Specifications\" />
       <Folder Include="AccountsReceivable\DTOs\" />
       <Folder Include="AccountsReceivable\Specifications\" />
-      <Folder Include="Budgeting\Specifications\" />
       <Folder Include="FiscalYear\DTOs\" />
       <Folder Include="FiscalYear\Events\" />
       <Folder Include="FiscalYear\Specifications\" />
@@ -28,6 +27,10 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\..\Core\ERP.Core\ERP.Core.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="LinqKit" Version="1.3.9" />
     </ItemGroup>
 
 </Project>

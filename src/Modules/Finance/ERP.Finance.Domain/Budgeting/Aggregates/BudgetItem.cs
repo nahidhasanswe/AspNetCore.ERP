@@ -11,7 +11,7 @@ public class BudgetItem : Entity
     public Money BudgetedAmount { get; private set; } // The planned spending/revenue
     public Money CommittedAmount { get; private set; } = new Money(0m, "USD");
     public string Period { get; private set; } // e.g., "JAN-2026", "Q1-2026"
-    public Guid? CostCenterId { get; private set; } // Changed to private set for update method
+    public Guid? CostCenterId { get; private set; }
 
     private BudgetItem() { }
 
@@ -51,6 +51,24 @@ public class BudgetItem : Entity
             return Result.Failure("Budget exhausted.");
 
         CommittedAmount = new Money(CommittedAmount.Amount + amount.Amount, amount.Currency);
+        return Result.Success();
+    }
+
+    public Result Release(Money amount)
+    {
+        if (amount.Amount <= 0) return Result.Failure("Release amount must be positive.");
+        if (amount.Amount > CommittedAmount.Amount) return Result.Failure("Cannot release more than committed amount.");
+
+        CommittedAmount = new Money(CommittedAmount.Amount - amount.Amount, amount.Currency);
+        return Result.Success();
+    }
+
+    public Result Liquidate(Money amount)
+    {
+        if (amount.Amount <= 0) return Result.Failure("Liquidate amount must be positive.");
+        if (amount.Amount > CommittedAmount.Amount) return Result.Failure("Cannot liquidate more than committed amount.");
+
+        CommittedAmount = new Money(CommittedAmount.Amount - amount.Amount, amount.Currency);
         return Result.Success();
     }
     

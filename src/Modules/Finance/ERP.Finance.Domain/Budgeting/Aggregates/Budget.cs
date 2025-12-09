@@ -3,9 +3,7 @@ using ERP.Core.Exceptions;
 using ERP.Finance.Domain.Budgeting.Events;
 using ERP.Finance.Domain.Shared.Enums;
 using ERP.Finance.Domain.Shared.ValueObjects;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using ERP.Core;
 
 namespace ERP.Finance.Domain.Budgeting.Aggregates;
 
@@ -165,5 +163,21 @@ public class Budget : AggregateRoot
         
         Status = BudgetStatus.Archived; // Or a new 'Closed' status
         // Add domain event for BudgetClosedEvent if needed
+    }
+
+    public Result ReleaseFunds(Guid budgetItemId, Money amount)
+    {
+        var item = _items.FirstOrDefault(i => i.Id == budgetItemId);
+        if (item == null) return Result.Failure($"Budget item with ID {budgetItemId} not found.");
+        
+        return item.Release(amount);
+    }
+
+    public Result LiquidateFunds(Guid budgetItemId, Money amount)
+    {
+        var item = _items.FirstOrDefault(i => i.Id == budgetItemId);
+        if (item == null) return Result.Failure($"Budget item with ID {budgetItemId} not found.");
+
+        return item.Liquidate(amount);
     }
 }
