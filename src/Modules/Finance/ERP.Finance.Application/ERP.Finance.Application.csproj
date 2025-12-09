@@ -8,6 +8,7 @@
 
     <ItemGroup>
       <Folder Include="AccountsPayable\Mappings\" />
+      <Folder Include="AccountsReceivable\EventHandlers\" />
       <Folder Include="AccountsReceivable\Mappings\" />
       <Folder Include="AccountsReceivable\Services\" />
       <Folder Include="Budgeting\EventHandlers\" />

@@ -10,13 +10,14 @@ public class Customer : AggregateRoot
 {
     public string Name { get; private set; }
     public string ContactEmail { get; private set; }
-    public Address BillingAddress { get; private set; } // New property
-    public ContactInfo ContactInfo { get; private set; } // New property
-    public string PaymentTerms { get; private set; } // New property
-    public string DefaultCurrency { get; private set; } // New property
-    public Guid ARControlAccountId { get; private set; } // New property
+    public Address BillingAddress { get; private set; }
+    public ContactInfo ContactInfo { get; private set; }
+    public string PaymentTerms { get; private set; }
+    public string DefaultCurrency { get; private set; }
+    public Guid ARControlAccountId { get; private set; }
     public CustomerStatus Status { get; private set; }
-    
+    public Guid? CustomerCreditProfileId { get; private set; } // New property
+
     private Customer() { }
 
     private Customer(
@@ -26,7 +27,8 @@ public class Customer : AggregateRoot
         ContactInfo contactInfo, 
         string paymentTerms, 
         string defaultCurrency, 
-        Guid arControlAccountId) : base(Guid.NewGuid())
+        Guid arControlAccountId,
+        Guid? customerCreditProfileId) : base(Guid.NewGuid())
     {
         Name = name;
         ContactEmail = contactEmail;
@@ -35,7 +37,8 @@ public class Customer : AggregateRoot
         PaymentTerms = paymentTerms;
         DefaultCurrency = defaultCurrency;
         ARControlAccountId = arControlAccountId;
-        Status = CustomerStatus.PendingApproval; // New customers start as PendingApproval
+        Status = CustomerStatus.PendingApproval;
+        CustomerCreditProfileId = customerCreditProfileId;
         
         AddDomainEvent(new CustomerCreatedEvent(this.Id, name, contactEmail));
     }
@@ -47,9 +50,17 @@ public class Customer : AggregateRoot
         ContactInfo contactInfo, 
         string paymentTerms, 
         string defaultCurrency, 
-        Guid arControlAccountId)
+        Guid arControlAccountId,
+        Guid? customerCreditProfileId = null)
     {
-        return new Customer(name, contactEmail, billingAddress, contactInfo, paymentTerms, defaultCurrency, arControlAccountId);
+        return new Customer(name, contactEmail, billingAddress, contactInfo, paymentTerms, defaultCurrency, arControlAccountId, customerCreditProfileId);
+    }
+
+    public void AssignCreditProfile(Guid creditProfileId)
+    {
+        if (CustomerCreditProfileId.HasValue)
+            throw new InvalidOperationException("Customer already has a credit profile assigned.");
+        CustomerCreditProfileId = creditProfileId;
     }
 
     public Result Update(
@@ -84,7 +95,7 @@ public class Customer : AggregateRoot
         return Result.Success();
     }
     
-    public Result Activate() // Renamed from Active() for clarity
+    public Result Activate()
     {
         if (Status == CustomerStatus.Active)
             return Result.Failure("Customer is already active.");
@@ -96,7 +107,7 @@ public class Customer : AggregateRoot
         return Result.Success();
     }
     
-    public Result Deactivate() // Renamed from Inactive() for clarity
+    public Result Deactivate()
     {
         if (Status == CustomerStatus.Inactive)
             return Result.Failure("Customer is already inactive.");

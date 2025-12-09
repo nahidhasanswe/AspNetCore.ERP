@@ -1,7 +1,9 @@
 using ERP.Core.Aggregates;
+using ERP.Core.Exceptions;
 using ERP.Finance.Domain.AccountsReceivable.Events;
 using ERP.Finance.Domain.Shared.Enums;
 using ERP.Finance.Domain.Shared.ValueObjects;
+using System;
 
 namespace ERP.Finance.Domain.AccountsReceivable.Aggregates;
 
@@ -11,15 +13,27 @@ public class CustomerCreditProfile : AggregateRoot
     public Money ApprovedLimit { get; private set; }
     public decimal CurrentExposure { get; private set; } // Total outstanding AR balance
     public CreditStatus Status { get; private set; }
+    public string DefaultPaymentTerms { get; private set; } // New property
 
     private CustomerCreditProfile() { }
 
-    public CustomerCreditProfile(Guid customerId, Money initialLimit) : base(Guid.NewGuid())
+    public CustomerCreditProfile(Guid customerId, Money initialLimit, string defaultPaymentTerms) : base(Guid.NewGuid())
     {
         CustomerId = customerId;
         ApprovedLimit = initialLimit;
         CurrentExposure = 0m;
         Status = CreditStatus.Active;
+        DefaultPaymentTerms = defaultPaymentTerms;
+    }
+
+    public void UpdateLimitAndTerms(Money newLimit, string newPaymentTerms)
+    {
+        if (newLimit.Amount < CurrentExposure)
+            throw new DomainException("New credit limit cannot be less than current exposure.");
+        
+        ApprovedLimit = newLimit;
+        DefaultPaymentTerms = newPaymentTerms;
+        // Optionally raise an event if these changes need to be audited or propagated
     }
 
     /// <summary>

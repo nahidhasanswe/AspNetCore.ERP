@@ -1,6 +1,7 @@
 using ERP.Core;
-using MediatR;
 using ERP.Finance.Domain.Shared.DTOs;
+using MediatR;
+using ERP.Finance.Domain.Shared.ValueObjects;
 
 namespace ERP.Finance.Application.AccountsReceivable.Commands.UpdateCustomer;
 
@@ -14,4 +15,5 @@ public class UpdateCustomerCommand : IRequest<Result>
     public string PaymentTerms { get; set; }
     public string DefaultCurrency { get; set; }
     public Guid ARControlAccountId { get; set; }
+    public Money ApprovedCreditLimit { get; set; } // Added for CustomerCreditProfile
 }
