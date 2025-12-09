@@ -1,10 +1,8 @@
 using ERP.Core.Aggregates;
 using ERP.Core.Exceptions;
-using ERP.Finance.Domain.AccountsPayable.Aggregates;
-using ERP.Finance.Domain.AccountsPayable.Events;
 using ERP.Finance.Domain.AccountsReceivable.Events;
-using ERP.Finance.Domain.Shared.Enums;
 using ERP.Finance.Domain.Events;
+using ERP.Finance.Domain.Shared.Enums;
 using ERP.Finance.Domain.Shared.ValueObjects;
 
 namespace ERP.Finance.Domain.AccountsReceivable.Aggregates;
@@ -14,7 +12,7 @@ public class CustomerInvoice : AggregateRoot
     public Guid CustomerId { get; private set; }
     public DateTime IssueDate { get; private set; }
     public DateTime DueDate { get; private set; }
-    public Money TotalAmount { get; private set; } // Uses shared Money Value Object
+    public Money TotalAmount { get; private set; }
     public InvoiceStatus Status { get; private set; }
     public string InvoiceNumber { get; private set; }
     public Guid ARControlAccountId { get; private set; } 
@@ -36,26 +34,45 @@ public class CustomerInvoice : AggregateRoot
 
     private CustomerInvoice() { }
 
-    public CustomerInvoice(Guid customerId, string invoiceNumber, Guid revenueAccountId, IEnumerable<CustomerInvoiceLineItem> lineItems) : base(Guid.NewGuid())
+    // Static factory method to create a draft invoice
+    public static CustomerInvoice CreateDraft(Guid customerId, string invoiceNumber, Guid arControlAccountId, DateTime dueDate, Guid? costCenterId, IEnumerable<CustomerInvoiceLineItem> lineItems)
     {
         if (string.IsNullOrWhiteSpace(invoiceNumber)) throw new ArgumentException("Invoice number is required.");
-        if (revenueAccountId == Guid.Empty) throw new ArgumentException("AR Control GL account is required.");
+        if (arControlAccountId == Guid.Empty) throw new ArgumentException("AR Control GL account is required.");
         if (lineItems == null || !lineItems.Any()) throw new DomainException("Invoice must have line items.");
-        
-        CustomerId = customerId;
-        InvoiceNumber = invoiceNumber;
-        ARControlAccountId = revenueAccountId;
-        IssueDate = DateTime.UtcNow.Date;
-        DueDate = IssueDate.AddDays(30); // Default Net 30
+
+        var invoice = new CustomerInvoice
+        {
+            Id = Guid.NewGuid(),
+            CustomerId = customerId,
+            InvoiceNumber = invoiceNumber,
+            ARControlAccountId = arControlAccountId,
+            IssueDate = DateTime.MinValue, // Will be set upon Issue()
+            DueDate = dueDate,
+            Status = InvoiceStatus.Draft,
+            CostCenterId = costCenterId,
+            TotalPaymentsReceived = 0m,
+            TotalAmountWrittenOff = 0m
+        };
+        invoice._lineItems.AddRange(lineItems);
+        invoice.RecalculateTotal();
+        return invoice;
+    }
+
+    // Method to issue a draft invoice
+    public void Issue(DateTime issueDate)
+    {
+        if (Status != InvoiceStatus.Draft)
+            throw new DomainException("Only draft invoices can be issued.");
+        if (!_lineItems.Any())
+            throw new DomainException("Cannot issue an invoice without line items.");
+        if (TotalAmount.Amount <= 0)
+            throw new DomainException("Cannot issue an invoice with zero or negative total amount.");
+
+        IssueDate = issueDate;
         Status = InvoiceStatus.Issued;
-        TotalPaymentsReceived = 0m;
-        
-        _lineItems.AddRange(lineItems);
-        RecalculateTotal(); // Calculate TotalAmount from lines
-        
-        // When an invoice is issued, the GL needs to be updated immediately (Accrual Accounting)
-        // Debit: Accounts Receivable (Asset increase)
-        // Credit: Revenue Account (Equity increase)
+
+        // Raise Event for GL (Debit AR, Credit Revenue)
         AddDomainEvent(new InvoiceIssuedEvent(
             this.Id, 
             this.TotalAmount, 
@@ -64,17 +81,70 @@ public class CustomerInvoice : AggregateRoot
             this.CostCenterId
         ));
     }
+
+    // Method to update invoice header details
+    public void Update(DateTime newDueDate, Guid? newCostCenterId)
+    {
+        if (Status != InvoiceStatus.Draft)
+            throw new DomainException("Only draft invoices can be updated.");
+        
+        DueDate = newDueDate;
+        CostCenterId = newCostCenterId;
+    }
+
+    // Method to add a line item to a draft invoice
+    public void AddLineItem(string description, Money lineAmount, Guid revenueAccountId, Guid? costCenterId)
+    {
+        if (Status != InvoiceStatus.Draft)
+            throw new DomainException("Cannot add line items to an invoice that is not in 'Draft' status.");
+        
+        _lineItems.Add(new CustomerInvoiceLineItem(description, lineAmount, revenueAccountId, costCenterId));
+        RecalculateTotal();
+    }
+
+    // Method to update an existing line item on a draft invoice
+    public void UpdateLineItem(Guid lineItemId, string description, Money lineAmount, Guid revenueAccountId, Guid? costCenterId)
+    {
+        if (Status != InvoiceStatus.Draft)
+            throw new DomainException("Cannot update line items on an invoice that is not in 'Draft' status.");
+        
+        var itemToUpdate = _lineItems.FirstOrDefault(li => li.Id == lineItemId);
+        if (itemToUpdate == null)
+            throw new DomainException($"Invoice line item with ID {lineItemId} not found.");
+
+        itemToUpdate.Update(description, lineAmount, revenueAccountId, costCenterId);
+        RecalculateTotal();
+    }
+
+    // Method to remove a line item from a draft invoice
+    public void RemoveLineItem(Guid lineItemId)
+    {
+        if (Status != InvoiceStatus.Draft)
+            throw new DomainException("Cannot remove line items from an invoice that is not in 'Draft' status.");
+        
+        var itemToRemove = _lineItems.FirstOrDefault(li => li.Id == lineItemId);
+        if (itemToRemove == null)
+            throw new DomainException($"Invoice line item with ID {lineItemId} not found.");
+
+        _lineItems.Remove(itemToRemove);
+        RecalculateTotal();
+    }
     
     private void RecalculateTotal()
     {
-        // Logic to sum lines and check currency consistency
+        if (!_lineItems.Any())
+        {
+            TotalAmount = new Money(0m, "USD"); // Default currency
+            return;
+        }
         var currency = _lineItems.First().LineAmount.Currency;
+        if (_lineItems.Any(li => li.LineAmount.Currency != currency))
+        {
+            throw new DomainException("All invoice line items must have the same currency.");
+        }
         TotalAmount = new Money(_lineItems.Sum(li => li.LineAmount.Amount), currency);
     }
     
-    /// <summary>
-    /// Core Domain Operation: Records the payment and raises a Domain Event for the GL.
-    /// </summary>
     public void RecordPayment(string transactionReference, Money paymentAmount, Guid cashAccountId, DateTime paymentDate)
     {
         if (Status == InvoiceStatus.Paid)
@@ -84,11 +154,9 @@ public class CustomerInvoice : AggregateRoot
         if (paymentAmount.Currency != TotalAmount.Currency)
             throw new DomainException("Payment currency must match invoice currency.");
         
-        // Check if payment exceeds remaining balance
         if (paymentAmount.Amount > OutstandingBalance.Amount)
             throw new DomainException($"Payment amount {paymentAmount.Amount} exceeds outstanding balance {OutstandingBalance.Amount}.");
 
-        // Update state
         TotalPaymentsReceived += paymentAmount.Amount;
         
         if (OutstandingBalance.Amount == 0)
@@ -96,7 +164,6 @@ public class CustomerInvoice : AggregateRoot
             Status = InvoiceStatus.Paid;
         }
         
-        // Raise Event for GL (PaymentReceivedEvent must be updated)
         AddDomainEvent(new PaymentReceivedEvent(
             this.Id, 
             paymentAmount, 
@@ -122,17 +189,15 @@ public class CustomerInvoice : AggregateRoot
             throw new DomainException("Invoice has no positive outstanding balance to write off.");
         }
 
-        // 1. Update Aggregate State
         this.TotalAmountWrittenOff += writeOffAmount.Amount;
         this.Status = InvoiceStatus.WrittenOff; 
         
-        // 2. Raise Event for GL and Credit Profile
         AddDomainEvent(new BadDebtWrittenOffEvent(
             InvoiceId: this.Id,
             WriteOffAmount: writeOffAmount,
             WriteOffDate: writeOffDate,
             ARControlAccountId: this.ARControlAccountId, 
-            BadDebtExpenseAccountId: badDebtExpenseAccountId, // The destination GL account
+            BadDebtExpenseAccountId: badDebtExpenseAccountId,
             Reason: reason,
             CostCenterId: this.CostCenterId
         ));
@@ -140,17 +205,14 @@ public class CustomerInvoice : AggregateRoot
     
     public void ApplyDeduction(Money amount, string reasonCode, Guid deductionExpenseAccountId)
     {
-        // 1. Validation: Ensure amount <= OutstandingBalance
         if (amount.Amount > this.OutstandingBalance.Amount) 
             throw new DomainException("Deduction amount exceeds outstanding balance.");
         
-        // 2. State Update
-        this.TotalAmountWrittenOff += amount.Amount; // Treat as a write-off/adjustment for tracking
+        this.TotalAmountWrittenOff += amount.Amount;
     
         if (this.OutstandingBalance.Amount == amount.Amount)
-            this.Status = InvoiceStatus.Closed; // Or DeductionApplied
+            this.Status = InvoiceStatus.Closed;
 
-        // 3. Raise Event
         AddDomainEvent(new DeductionAppliedToInvoiceEvent(
             this.Id, amount, reasonCode, this.ARControlAccountId, deductionExpenseAccountId
         ));

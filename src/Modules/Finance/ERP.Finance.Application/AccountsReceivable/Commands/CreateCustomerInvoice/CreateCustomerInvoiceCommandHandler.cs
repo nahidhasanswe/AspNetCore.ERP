@@ -1,40 +1,47 @@
 using ERP.Core;
 using ERP.Core.Behaviors;
 using ERP.Core.Uow;
-using ERP.Finance.Domain.AccountsPayable.Aggregates;
 using ERP.Finance.Domain.AccountsReceivable.Aggregates;
+using MediatR;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace ERP.Finance.Application.AccountsReceivable.Commands.CreateCustomerInvoice;
 
-public class CreateCustomerInvoiceCommandHandler(
-    ICustomerInvoiceRepository repository,
-    IUnitOfWorkManager unitOfWork
-) : IRequestCommandHandler<CreateCustomerInvoiceCommand, Guid>
+public class CreateCustomerInvoiceCommandHandler : IRequestCommandHandler<CreateCustomerInvoiceCommand, Guid>
 {
+    private readonly ICustomerInvoiceRepository _invoiceRepository;
+    private readonly IUnitOfWorkManager _unitOfWork;
+
+    public CreateCustomerInvoiceCommandHandler(ICustomerInvoiceRepository invoiceRepository, IUnitOfWorkManager unitOfWork)
+    {
+        _invoiceRepository = invoiceRepository;
+        _unitOfWork = unitOfWork;
+    }
+
     public async Task<Result<Guid>> Handle(CreateCustomerInvoiceCommand command, CancellationToken cancellationToken)
     {
-        // 1. Map DTOs to Domain Value Objects
-        var domainLineItems = command.LineItems.Select(dto => 
-            new CustomerInvoiceLineItem(
-                dto.Description, 
-                dto.LineAmount, 
-                dto.RevenueAccountId, 
-                dto.CostCenterId
-            )).ToList();
+        using var scope = _unitOfWork.Begin();
 
-        // 2. Execute Domain Logic: Create the Aggregate Root
-        var invoice = new CustomerInvoice(
-            command.CustomerId, 
-            command.InvoiceNumber, 
-            command.ARControlAccountId, // Passed to the constructor
-            domainLineItems
+        var lineItems = command.LineItems.Select(dto => new CustomerInvoiceLineItem(
+            dto.Description,
+            dto.LineAmount,
+            dto.RevenueAccountId,
+            dto.CostCenterId
+        )).ToList();
+
+        var invoice = CustomerInvoice.CreateDraft(
+            command.CustomerId,
+            command.InvoiceNumber,
+            command.ARControlAccountId,
+            command.DueDate,
+            command.CostCenterId,
+            lineItems
         );
-        // The CustomerInvoice constructor calculates TotalAmount and automatically raises the CustomerInvoiceCreatedEvent.
 
-        // 3. Persist and Dispatch Event
-        using var scope = unitOfWork.Begin();
-        await repository.AddAsync(invoice, cancellationToken);
-        await scope.SaveChangesAsync(cancellationToken); // Saves state and dispatches the event
+        await _invoiceRepository.AddAsync(invoice, cancellationToken);
+        await scope.SaveChangesAsync(cancellationToken);
 
         return Result.Success(invoice.Id);
     }

@@ -1,23 +1,25 @@
 using ERP.Core;
-using MediatR;
 using ERP.Finance.Domain.Shared.ValueObjects;
+using MediatR;
+using System;
+using System.Collections.Generic;
 
 namespace ERP.Finance.Application.AccountsReceivable.Commands.CreateCustomerInvoice;
 
-public record CreateCustomerInvoiceCommand(
-    Guid CustomerId,
-    // CRITICAL: Invoice must be broken down by line item, not just total amount
-    IEnumerable<InvoiceLineItemDto> LineItems, 
-    string InvoiceNumber,
-    DateTime InvoiceDate,
-    DateTime DueDate,
-    // CRITICAL: The GL account ID where the asset (AR) will be posted
-    Guid ARControlAccountId 
-) : IRequest<Result<Guid>>;
+public class CreateCustomerInvoiceCommand : IRequest<Result<Guid>>
+{
+    public Guid CustomerId { get; set; }
+    public string InvoiceNumber { get; set; }
+    public Guid ARControlAccountId { get; set; } // GL Account for Accounts Receivable
+    public DateTime DueDate { get; set; }
+    public Guid? CostCenterId { get; set; }
+    public List<CustomerInvoiceLineItemDto> LineItems { get; set; } = new();
 
-public record InvoiceLineItemDto(
-    Money LineAmount, // Includes Currency
-    string Description,
-    Guid RevenueAccountId, // The specific GL revenue account for this item
-    Guid? CostCenterId
-);
+    public class CustomerInvoiceLineItemDto
+    {
+        public string Description { get; set; }
+        public Money LineAmount { get; set; }
+        public Guid RevenueAccountId { get; set; } // GL Account for Revenue
+        public Guid? CostCenterId { get; set; }
+    }
+}
