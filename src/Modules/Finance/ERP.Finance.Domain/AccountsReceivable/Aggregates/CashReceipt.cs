@@ -3,6 +3,7 @@ using ERP.Core.Aggregates;
 using ERP.Finance.Domain.AccountsReceivable.Enums;
 using ERP.Finance.Domain.AccountsReceivable.Events;
 using ERP.Finance.Domain.Shared.ValueObjects;
+using System;
 
 namespace ERP.Finance.Domain.AccountsReceivable.Aggregates;
 
@@ -81,6 +82,35 @@ public class CashReceipt : AggregateRoot
         }
 
         // Note: No event needed here; the application event is triggered by the Invoice/Deduction commands.
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Increases the unapplied balance by reversing a cash application.
+    /// </summary>
+    public Result UnapplyCash(Money amountToUnapply)
+    {
+        if (amountToUnapply.Amount <= 0)
+            return Result.Failure("Amount to unapply must be positive.");
+        
+        if (amountToUnapply.Amount > TotalAppliedAmount.Amount)
+            return Result.Failure("Cannot unapply more cash than has been applied.");
+
+        TotalAppliedAmount = new Money(
+            TotalAppliedAmount.Amount - amountToUnapply.Amount,
+            TotalAppliedAmount.Currency
+        );
+
+        if (TotalAppliedAmount.Amount == 0)
+        {
+            Status = ReceiptStatus.Unapplied;
+        }
+        else if (Status == ReceiptStatus.FullyApplied)
+        {
+            Status = ReceiptStatus.PartiallyApplied;
+        }
+
+        // Note: No event needed here; the unapplication event is triggered by the Invoice/Deduction commands.
         return Result.Success();
     }
 }

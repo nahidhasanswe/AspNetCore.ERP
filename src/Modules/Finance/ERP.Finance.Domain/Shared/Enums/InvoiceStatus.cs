@@ -8,6 +8,7 @@ public enum InvoiceStatus
     Approved,
     ScheduledForPayment,
     Paid,
+    PartiallyPaid,
     Cancel,
     Issued,
     Overdue,

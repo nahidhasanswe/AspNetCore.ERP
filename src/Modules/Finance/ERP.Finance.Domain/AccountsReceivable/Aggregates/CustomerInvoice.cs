@@ -7,7 +7,6 @@ using ERP.Finance.Domain.Shared.ValueObjects;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using CustomerInvoiceLineItemProjection = ERP.Finance.Domain.Events.CustomerInvoiceLineItemProjection;
 
 namespace ERP.Finance.Domain.AccountsReceivable.Aggregates;
 
@@ -23,12 +22,13 @@ public class CustomerInvoice : AggregateRoot
     public Guid? CostCenterId { get; private set; }
     public decimal TotalPaymentsReceived { get; private set; } 
     public decimal TotalAmountWrittenOff { get; private set; }
-    
+    public decimal TotalCreditsApplied { get; private set; } // New property for credits
+
     public Money OutstandingBalance 
     {
         get 
         {
-            var remaining = TotalAmount.Amount - TotalPaymentsReceived - TotalAmountWrittenOff;
+            var remaining = TotalAmount.Amount - TotalPaymentsReceived - TotalAmountWrittenOff - TotalCreditsApplied;
             return new Money(Math.Max(0, remaining), TotalAmount.Currency);
         }
     }
@@ -56,7 +56,8 @@ public class CustomerInvoice : AggregateRoot
             Status = InvoiceStatus.Draft,
             CostCenterId = costCenterId,
             TotalPaymentsReceived = 0m,
-            TotalAmountWrittenOff = 0m
+            TotalAmountWrittenOff = 0m,
+            TotalCreditsApplied = 0m // Initialize new property
         };
         invoice._lineItems.AddRange(lineItems);
         invoice.RecalculateTotal();
@@ -182,6 +183,59 @@ public class CustomerInvoice : AggregateRoot
             adjustmentAccountId, // The GL account for the adjustment (e.g., Sales Returns, Discount Expense)
             DateTime.UtcNow,
             costCenterId
+        ));
+    }
+
+    public void ApplyCreditMemo(CustomerCreditMemo creditMemo, Money amountToApply)
+    {
+        if (creditMemo.CustomerId != CustomerId)
+            throw new DomainException("Credit memo must belong to the same customer as the invoice.");
+        if (amountToApply.Amount > OutstandingBalance.Amount)
+            throw new DomainException("Credit applied cannot exceed the outstanding balance of the invoice.");
+        if (amountToApply.Amount <= 0)
+            throw new DomainException("Amount to apply must be positive.");
+        if (amountToApply.Currency != TotalAmount.Currency)
+            throw new DomainException("Credit memo currency must match invoice currency.");
+
+        TotalCreditsApplied += amountToApply.Amount;
+
+        // If the invoice is now fully paid/credited, update status
+        if (OutstandingBalance.Amount == 0)
+        {
+            Status = InvoiceStatus.Paid; // Or InvoiceStatus.Closed
+        }
+
+        // Raise event for GL posting (Debit AR Control, Credit Customer Credits Clearing)
+        AddDomainEvent(new CustomerCreditAppliedToInvoiceEvent(
+            InvoiceId: this.Id,
+            CreditMemoId: creditMemo.Id,
+            AmountApplied: amountToApply,
+            AppliedDate: DateTime.UtcNow,
+            ARControlAccountId: this.ARControlAccountId
+        ));
+    }
+
+    public void UnapplyPayment(Money amountToUnapply)
+    {
+        if (amountToUnapply.Amount <= 0)
+            throw new DomainException("Amount to unapply must be positive.");
+        if (amountToUnapply.Amount > TotalPaymentsReceived)
+            throw new DomainException("Cannot unapply more than has been received.");
+
+        TotalPaymentsReceived -= amountToUnapply.Amount;
+
+        // If the invoice was fully paid and now has an outstanding balance, revert status
+        if (Status == InvoiceStatus.Paid && OutstandingBalance.Amount > 0)
+        {
+            Status = InvoiceStatus.Issued; // Or Overdue, depending on DueDate
+        }
+
+        // Raise event for GL reversal (Debit Cash, Credit AR)
+        AddDomainEvent(new PaymentUnappliedEvent(
+            InvoiceId: this.Id,
+            AmountUnapplied: amountToUnapply,
+            UnappliedDate: DateTime.UtcNow,
+            ARControlAccountId: this.ARControlAccountId
         ));
     }
     
