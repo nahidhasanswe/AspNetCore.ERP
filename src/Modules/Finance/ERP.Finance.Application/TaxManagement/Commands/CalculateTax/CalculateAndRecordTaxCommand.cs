@@ -2,6 +2,7 @@ using ERP.Core;
 using ERP.Core.Behaviors;
 using ERP.Finance.Domain.Shared.ValueObjects;
 using MediatR;
+using System;
 
 namespace ERP.Finance.Application.TaxManagement.Commands.CalculateTax;
 
@@ -15,4 +16,5 @@ public class CalculateAndRecordTaxCommand : IRequestCommand<bool>
     public Guid? CostCenterId { get; set; }
     
     public Guid SourceControlAccountId { get; set; }
+    public string Reference { get; set; } // Added this property
 }

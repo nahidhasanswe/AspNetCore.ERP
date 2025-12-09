@@ -49,6 +49,7 @@ public class CreateVendorInvoiceCommandHandler(
             SourceTransactionId = invoice.Id,
             IsSalesTransaction = false, // Indicates Purchase/AP Tax
             CostCenterId = command.CostCenterId,
+            Reference = invoice.InvoiceNumber
         }, cancellationToken);
 
         using var scope = unitOfWork.Begin();

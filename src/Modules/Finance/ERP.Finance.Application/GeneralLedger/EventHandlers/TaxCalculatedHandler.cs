@@ -1,10 +1,10 @@
-using ERP.Core.Uow;
 using ERP.Finance.Domain.FiscalYear.Aggregates;
 using ERP.Finance.Domain.GeneralLedger.Aggregates;
 using ERP.Finance.Domain.GeneralLedger.Services;
 using ERP.Finance.Domain.Shared.Currency;
 using ERP.Finance.Domain.TaxManagement.Events;
 using MediatR;
+using ERP.Core.Uow;
 
 namespace ERP.Finance.Application.GeneralLedger.EventHandlers;
 
@@ -13,14 +13,14 @@ public class TaxCalculatedHandler(
     IUnitOfWorkManager unitOfWork,
     ICurrencyConversionService currencyConverter,
     IFiscalPeriodRepository fiscalPeriodRepository,
-    IAccountValidationService accountValidator
-    ) : INotificationHandler<TaxCalculatedEvent>
+    IAccountValidationService accountValidator)
+    : INotificationHandler<TaxCalculatedEvent>
 {
     private const string SystemBaseCurrency = "USD";
 
     public async Task Handle(TaxCalculatedEvent notification, CancellationToken cancellationToken)
     {
-        var fiscalPeriod = await fiscalPeriodRepository.GetPeriodByDateAsync(notification.OccurredOn, cancellationToken);
+        var fiscalPeriod = await fiscalPeriodRepository.GetPeriodByDateAsync(notification.TransactionDate, cancellationToken);
         if (fiscalPeriod is null)
         {
             // Log error: Cannot post tax GL as no open fiscal period was found.
@@ -32,7 +32,7 @@ public class TaxCalculatedHandler(
 
         var entry = new JournalEntry(
             $"Tax liability from Source: {notification.SourceTransactionId}", 
-            notification.Reference
+            notification.Reference // Use the Reference from the event
         );
 
         Guid arApControlAccountId = notification.SourceControlAccountId;
@@ -40,7 +40,7 @@ public class TaxCalculatedHandler(
         var baseTaxAmount = await currencyConverter.ConvertAsync(
             source: taxAmount, 
             targetCurrency: SystemBaseCurrency,
-            conversionDate: notification.OccurredOn 
+            conversionDate: notification.TransactionDate 
         );
         
         // **GL Posting Logic based on Transaction Type**
@@ -60,7 +60,6 @@ public class TaxCalculatedHandler(
             
             // 3. Debit: AR Control Account (Tax portion of the customer's total debt)
             entry.AddLine(new LedgerLine(
-                // NEW Parameter 1: JournalEntryId
                 entry.Id, 
                 arApControlAccountId, 
                 taxAmount,

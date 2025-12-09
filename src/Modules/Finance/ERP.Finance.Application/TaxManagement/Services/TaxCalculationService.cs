@@ -1,41 +1,29 @@
+using ERP.Core;
 using ERP.Finance.Domain.Shared.ValueObjects;
 using ERP.Finance.Domain.TaxManagement.Aggregates;
-using ERP.Finance.Domain.TaxManagement.DTOs;
 using ERP.Finance.Domain.TaxManagement.Service;
 
 namespace ERP.Finance.Application.TaxManagement.Services;
 
-public class TaxCalculationService(
-    ITaxRateRepository repository
-    ) : ITaxCalculationService
+public class TaxCalculationService(ITaxRateRepository taxRateRepository) : ITaxCalculationService
 {
-    public async Task<TaxCalculationResult> CalculateTax(TaxCalculationRequest request)
+    public async Task<Result<(Money TaxAmount, Guid TaxPayableAccountId)>> CalculateTax(
+        Guid jurisdictionId,
+        Money baseAmount,
+        DateTime transactionDate,
+        CancellationToken cancellationToken = default)
     {
-        // 1. Find the applicable tax rate
-        var taxRate = await repository.GetRateByJurisdictionAndDate(
-            request.JurisdictionCode, 
-            request.TransactionDate
-        );
+        var applicableRate = (await taxRateRepository.ListAllAsync(cancellationToken))
+            .FirstOrDefault(tr => tr.JurisdictionId == jurisdictionId &&
+                                 tr.EffectiveDate <= transactionDate &&
+                                 tr.IsActive); // Ensure rate is active
 
-        if (taxRate is null)
+        if (applicableRate == null)
         {
-            // No tax applies for this jurisdiction/date.
-            return new TaxCalculationResult 
-            { 
-                TaxAmount = new Money(0, request.BaseAmount.Currency),
-                TaxPayableAccountId = Guid.Empty // Signifies no tax liability
-            };
+            return Result.Failure<(Money TaxAmount, Guid TaxPayableAccountId)>("No applicable tax rate found for the given jurisdiction and date.");
         }
 
-        // 2. Perform the calculation (Domain Rule)
-        decimal taxAmountValue = request.BaseAmount.Amount * taxRate.Rate;
-        
-        return new TaxCalculationResult
-        {
-            TaxAmount = new Money(taxAmountValue, request.BaseAmount.Currency),
-            TaxPayableAccountId = taxRate.TaxPayableAccountId,
-            SourceTransactionId = request.SourceTransactionId,
-            IsSalesTransaction = request.IsSalesTransaction
-        };
+        var taxAmount = new Money(baseAmount.Amount * applicableRate.Rate, baseAmount.Currency);
+        return Result.Success((taxAmount, applicableRate.TaxPayableAccountId));
     }
 }

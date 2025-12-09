@@ -4,13 +4,18 @@ using ERP.Finance.Domain.Shared.ValueObjects;
 namespace ERP.Finance.Domain.TaxManagement.Events;
 
 public record TaxCalculatedEvent(
-    Guid SourceTransactionId,
-    bool IsSalesTransaction,
+    Guid TaxTransactionId, // Unique ID for this tax calculation instance
+    Guid SourceTransactionId, // e.g., Invoice ID
+    Money BaseAmount,
     Money TaxAmount,
+    Guid JurisdictionId,
+    string JurisdictionCode,
+    DateTime TransactionDate,
     Guid TaxPayableAccountId,
     Guid SourceControlAccountId,
-    string Reference,
-    Guid? CostCenterId
+    bool IsSalesTransaction, 
+    Guid? CostCenterId,
+    string Reference
 ) : IDomainEvent
 {
     public DateTime OccurredOn { get; } = DateTime.UtcNow;
