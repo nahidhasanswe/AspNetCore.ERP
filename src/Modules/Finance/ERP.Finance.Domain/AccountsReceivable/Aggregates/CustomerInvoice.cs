@@ -1,9 +1,13 @@
 using ERP.Core.Aggregates;
 using ERP.Core.Exceptions;
 using ERP.Finance.Domain.AccountsReceivable.Events;
-using ERP.Finance.Domain.Events;
+using ERP.Finance.Domain.Events; // Corrected using statement for InvoiceIssuedEvent
 using ERP.Finance.Domain.Shared.Enums;
 using ERP.Finance.Domain.Shared.ValueObjects;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using CustomerInvoiceLineItemProjection = ERP.Finance.Domain.Events.CustomerInvoiceLineItemProjection;
 
 namespace ERP.Finance.Domain.AccountsReceivable.Aggregates;
 
@@ -77,7 +81,7 @@ public class CustomerInvoice : AggregateRoot
             this.Id, 
             this.TotalAmount, 
             this.ARControlAccountId,
-            this.LineItems.Select(li => new CustomerInvoiceLineItemProjection(li.LineAmount, li.RevenueAccountId, li.Description, this.CostCenterId)).ToList(),
+            this.LineItems.Select(li => new CustomerInvoiceLineItemProjection(li.LineAmount, li.RevenueAccountId, li.Description, li.CostCenterId)).ToList(), // Corrected li.CostCenterId
             this.CostCenterId
         ));
     }
@@ -128,6 +132,57 @@ public class CustomerInvoice : AggregateRoot
 
         _lineItems.Remove(itemToRemove);
         RecalculateTotal();
+    }
+
+    public void Cancel(string reason)
+    {
+        if (Status == InvoiceStatus.Paid || Status == InvoiceStatus.WrittenOff || Status == InvoiceStatus.Closed)
+            throw new DomainException("Cannot cancel a paid, written-off, or closed invoice.");
+        if (TotalPaymentsReceived > 0)
+            throw new DomainException("Cannot cancel an invoice with recorded payments.");
+
+        Status = InvoiceStatus.Cancel;
+
+        // Raise event for GL reversal
+        AddDomainEvent(new InvoiceCancelledEvent(
+            this.Id,
+            this.TotalAmount,
+            this.ARControlAccountId,
+            this.LineItems.Select(li => new CustomerInvoiceLineItemProjection(li.LineAmount, li.RevenueAccountId, li.Description, li.CostCenterId)).ToList(),
+            reason,
+            DateTime.UtcNow,
+            this.CostCenterId
+        ));
+    }
+
+    public void Adjust(Money adjustmentAmount, string reason, Guid adjustmentAccountId, Guid? costCenterId)
+    {
+        if (Status == InvoiceStatus.Paid || Status == InvoiceStatus.WrittenOff || Status == InvoiceStatus.Closed || Status == InvoiceStatus.Cancel)
+            throw new DomainException("Cannot adjust a paid, written-off, closed, or cancelled invoice.");
+        if (adjustmentAmount.Amount == 0)
+            throw new DomainException("Adjustment amount cannot be zero.");
+        if (adjustmentAmount.Currency != TotalAmount.Currency)
+            throw new DomainException("Adjustment currency must match invoice currency.");
+
+        // Update TotalAmount and recalculate outstanding balance
+        TotalAmount = new Money(TotalAmount.Amount + adjustmentAmount.Amount, TotalAmount.Currency);
+        
+        // If the adjustment makes the outstanding balance zero or negative, mark as paid/closed
+        if (OutstandingBalance.Amount <= 0)
+        {
+            Status = InvoiceStatus.Paid; // Or InvoiceStatus.Closed if it's a final adjustment
+        }
+
+        // Raise event for GL posting
+        AddDomainEvent(new InvoiceAdjustedEvent(
+            this.Id,
+            adjustmentAmount,
+            reason,
+            this.ARControlAccountId,
+            adjustmentAccountId, // The GL account for the adjustment (e.g., Sales Returns, Discount Expense)
+            DateTime.UtcNow,
+            costCenterId
+        ));
     }
     
     private void RecalculateTotal()
