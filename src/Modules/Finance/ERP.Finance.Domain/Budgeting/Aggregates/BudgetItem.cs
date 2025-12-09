@@ -1,6 +1,7 @@
 using ERP.Core;
 using ERP.Core.Entities;
 using ERP.Finance.Domain.Shared.ValueObjects;
+using System;
 
 namespace ERP.Finance.Domain.Budgeting.Aggregates;
 
@@ -14,10 +15,22 @@ public class BudgetItem : Entity
 
     private BudgetItem() { }
 
+    // Existing constructor (generates new ID)
     public BudgetItem(Guid accountId, Money budgetedAmount, string period, Guid? costCenterId) : base(Guid.NewGuid())
     {
         if (budgetedAmount.Amount <= 0) throw new ArgumentException("Budgeted amount must be positive.");
         
+        AccountId = accountId;
+        BudgetedAmount = budgetedAmount;
+        Period = period;
+        CostCenterId = costCenterId;
+    }
+
+    // New constructor (accepts existing ID) - useful for rehydrating or specific scenarios
+    public BudgetItem(Guid id, Guid accountId, Money budgetedAmount, string period, Guid? costCenterId) : base(id)
+    {
+        if (budgetedAmount.Amount <= 0) throw new ArgumentException("Budgeted amount must be positive.");
+
         AccountId = accountId;
         BudgetedAmount = budgetedAmount;
         Period = period;

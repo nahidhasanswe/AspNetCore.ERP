@@ -2,35 +2,50 @@ using ERP.Core;
 using ERP.Core.Behaviors;
 using ERP.Core.Uow;
 using ERP.Finance.Domain.Budgeting.Aggregates;
-using ERP.Finance.Domain.FiscalYear.Aggregates;
-using ERP.Finance.Domain.Shared.ValueObjects;
+using MediatR;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace ERP.Finance.Application.Budgeting.Commands.CreateBudget;
 
-public class CreateBudgetCommandHandler(
-    IBudgetRepository repository,
-    IFiscalPeriodRepository fiscalPeriodRepository,
-    IUnitOfWorkManager unitOfWork
-) : IRequestCommandHandler<CreateBudgetCommand, Guid>
+public class CreateBudgetCommandHandler : IRequestCommandHandler<CreateBudgetCommand, Guid>
 {
+    private readonly IBudgetRepository _budgetRepository;
+    private readonly IUnitOfWorkManager _unitOfWork;
+
+    public CreateBudgetCommandHandler(IBudgetRepository budgetRepository, IUnitOfWorkManager unitOfWork)
+    {
+        _budgetRepository = budgetRepository;
+        _unitOfWork = unitOfWork;
+    }
+
     public async Task<Result<Guid>> Handle(CreateBudgetCommand command, CancellationToken cancellationToken)
     {
-        var lineItems = command.LineItems.Select(dto => 
-            new BudgetItem(dto.GlAccountId, new Money(dto.Amount, dto.Currency), command.FiscalPeriod, dto.CostCenterId)).ToList();
+        using var scope = _unitOfWork.Begin();
 
-        var period = await fiscalPeriodRepository.GetPeriodByNameAsync(command.FiscalPeriod, cancellationToken);
+        var budget = new Budget(
+            command.BusinessUnitId,
+            command.Name,
+            command.FiscalPeriod,
+            command.StartDate,
+            command.EndDate
+        );
 
-        if (period is null)
-            return Result.Failure<Guid>("Fiscal period not found.");
+        foreach (var itemDto in command.Items)
+        {
+            var budgetItem = new BudgetItem(
+                itemDto.AccountId,
+                itemDto.BudgetedAmount,
+                itemDto.Period,
+                itemDto.CostCenterId
+            );
+            budget.AddItem(budgetItem);
+        }
 
-        var budget = new Budget(command.BusinessUnitId, command.Name, command.FiscalPeriod, period.StartDate, period.EndDate);
-        
-        command.LineItems.ToList().ForEach(item => budget.AddItem(new BudgetItem(item.GlAccountId, new Money(item.Amount, item.Currency), command.FiscalPeriod, item.CostCenterId)));
-
-        using var scope = unitOfWork.Begin();
-        await repository.AddAsync(budget, cancellationToken);
+        await _budgetRepository.AddAsync(budget, cancellationToken);
         await scope.SaveChangesAsync(cancellationToken);
-        
+
         return Result.Success(budget.Id);
     }
 }
