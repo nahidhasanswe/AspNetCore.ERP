@@ -4,6 +4,9 @@ using ERP.Finance.Domain.Budgeting.Events;
 using ERP.Finance.Domain.Shared.Enums;
 using ERP.Finance.Domain.Shared.ValueObjects;
 using ERP.Core;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ERP.Finance.Domain.Budgeting.Aggregates;
 
@@ -179,5 +182,34 @@ public class Budget : AggregateRoot
         if (item == null) return Result.Failure($"Budget item with ID {budgetItemId} not found.");
 
         return item.Liquidate(amount);
+    }
+
+    public Result TransferFunds(Guid fromBudgetItemId, Guid toBudgetItemId, Money amount)
+    {
+        if (Status != BudgetStatus.Draft && Status != BudgetStatus.Approved)
+            return Result.Failure("Funds can only be transferred in Draft or Approved budgets.");
+        if (amount.Amount <= 0)
+            return Result.Failure("Transfer amount must be positive.");
+        
+        var fromItem = _items.FirstOrDefault(item => item.Id == fromBudgetItemId);
+        var toItem = _items.FirstOrDefault(item => item.Id == toBudgetItemId);
+
+        if (fromItem == null) return Result.Failure($"Source budget item with ID {fromBudgetItemId} not found.");
+        if (toItem == null) return Result.Failure($"Destination budget item with ID {toBudgetItemId} not found.");
+        if (fromItem.BudgetedAmount.Currency != amount.Currency || toItem.BudgetedAmount.Currency != amount.Currency)
+            return Result.Failure("Cannot transfer funds between different currencies.");
+        if (fromItem.BudgetedAmount.Currency != toItem.BudgetedAmount.Currency)
+            return Result.Failure("Cannot transfer funds between budget items of different currencies.");
+
+        // Check if enough funds are available to transfer from the source
+        if (fromItem.BudgetedAmount.Amount - fromItem.CommittedAmount.Amount < amount.Amount)
+            return Result.Failure("Insufficient available funds in the source budget item for transfer.");
+
+        // Perform the transfer
+        fromItem.Update(new Money(fromItem.BudgetedAmount.Amount - amount.Amount, amount.Currency), fromItem.Period, fromItem.CostCenterId);
+        toItem.Update(new Money(toItem.BudgetedAmount.Amount + amount.Amount, amount.Currency), toItem.Period, toItem.CostCenterId);
+
+        // Optionally, raise a domain event for BudgetFundsTransferredEvent
+        return Result.Success();
     }
 }
