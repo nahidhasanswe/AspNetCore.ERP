@@ -11,11 +11,10 @@ public class BudgetItem : Entity
     public Money BudgetedAmount { get; private set; } // The planned spending/revenue
     public Money CommittedAmount { get; private set; } = new Money(0m, "USD");
     public string Period { get; private set; } // e.g., "JAN-2026", "Q1-2026"
-    public Guid? CostCenterId { get; }
+    public Guid? CostCenterId { get; private set; } // Changed to private set for update method
 
     private BudgetItem() { }
 
-    // Existing constructor (generates new ID)
     public BudgetItem(Guid accountId, Money budgetedAmount, string period, Guid? costCenterId) : base(Guid.NewGuid())
     {
         if (budgetedAmount.Amount <= 0) throw new ArgumentException("Budgeted amount must be positive.");
@@ -26,7 +25,6 @@ public class BudgetItem : Entity
         CostCenterId = costCenterId;
     }
 
-    // New constructor (accepts existing ID) - useful for rehydrating or specific scenarios
     public BudgetItem(Guid id, Guid accountId, Money budgetedAmount, string period, Guid? costCenterId) : base(id)
     {
         if (budgetedAmount.Amount <= 0) throw new ArgumentException("Budgeted amount must be positive.");
@@ -35,6 +33,16 @@ public class BudgetItem : Entity
         BudgetedAmount = budgetedAmount;
         Period = period;
         CostCenterId = costCenterId;
+    }
+
+    public void Update(Money newBudgetedAmount, string newPeriod, Guid? newCostCenterId)
+    {
+        if (newBudgetedAmount.Amount <= 0) throw new ArgumentException("Budgeted amount must be positive.");
+        // Add checks to ensure newBudgetedAmount is not less than CommittedAmount if desired
+        
+        BudgetedAmount = newBudgetedAmount;
+        Period = newPeriod;
+        CostCenterId = newCostCenterId;
     }
     
     public Result Reserve(Money amount)
