@@ -1,6 +1,5 @@
 using ERP.Core.Aggregates;
 using ERP.Core.Exceptions;
-using System;
 
 namespace ERP.Finance.Domain.FixedAssetManagement.Aggregates;
 
@@ -13,6 +12,7 @@ public enum InventoryStatus
 
 public class PhysicalInventoryRecord : AggregateRoot
 {
+    public Guid BusinessUnitId { get; private set; } // New property
     public Guid AssetId { get; private set; }
     public DateTime CountDate { get; private set; }
     public string CountedLocation { get; private set; }
@@ -22,8 +22,9 @@ public class PhysicalInventoryRecord : AggregateRoot
 
     private PhysicalInventoryRecord() { }
 
-    public PhysicalInventoryRecord(Guid assetId, DateTime countDate, string countedLocation, string countedBy, string notes) : base(Guid.NewGuid())
+    public PhysicalInventoryRecord(Guid businessUnitId, Guid assetId, DateTime countDate, string countedLocation, string countedBy, string notes) : base(Guid.NewGuid())
     {
+        BusinessUnitId = businessUnitId;
         AssetId = assetId;
         CountDate = countDate;
         CountedLocation = countedLocation;

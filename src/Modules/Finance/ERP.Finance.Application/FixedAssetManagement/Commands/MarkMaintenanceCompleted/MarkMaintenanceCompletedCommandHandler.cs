@@ -20,6 +20,11 @@ public class MarkMaintenanceCompletedCommandHandler(
             return Result.Failure("Maintenance Record not found.");
         }
 
+        if (record.BusinessUnitId != command.BusinessUnitId)
+        {
+            return Result.Failure("Maintenance Record does not belong to the specified Business Unit.");
+        }
+
         record.MarkCompleted(command.CompletionDate);
 
         await maintenanceRepository.UpdateAsync(record, cancellationToken);

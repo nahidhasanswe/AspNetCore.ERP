@@ -18,6 +18,11 @@ public class RevalueAssetCommandHandler(IFixedAssetRepository fixedAssetReposito
             return Result.Failure("Fixed Asset not found.");
         }
 
+        if (fixedAsset.BusinessUnitId != command.BusinessUnitId)
+        {
+            return Result.Failure("Fixed Asset does not belong to the specified Business Unit.");
+        }
+
         fixedAsset.Revalue(
             command.RevaluationDate,
             command.NewAcquisitionCost,

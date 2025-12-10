@@ -19,6 +19,11 @@ public class PostClosingEntryCommandHandler(
             return Result.Failure("Fiscal Period not found.");
         }
 
+        if (fiscalPeriod.BusinessUnitId != command.BusinessUnitId)
+        {
+            return Result.Failure("Fiscal Period does not belong to the specified Business Unit.");
+        }
+
         fiscalPeriod.PostClosingEntry();
 
         await fiscalPeriodRepository.UpdateAsync(fiscalPeriod, cancellationToken);

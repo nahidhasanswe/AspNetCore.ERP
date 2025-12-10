@@ -20,6 +20,11 @@ public class ReconcilePhysicalInventoryCommandHandler(
             return Result.Failure("Physical Inventory Record not found.");
         }
 
+        if (record.BusinessUnitId != command.BusinessUnitId)
+        {
+            return Result.Failure("Physical Inventory Record does not belong to the specified Business Unit.");
+        }
+
         record.MarkAsReconciled();
 
         await recordRepository.UpdateAsync(record, cancellationToken);

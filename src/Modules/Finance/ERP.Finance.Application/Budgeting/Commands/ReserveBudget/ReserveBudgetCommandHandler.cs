@@ -40,7 +40,7 @@ public class ReserveBudgetCommandHandler(
         }
 
         // 5. Create a new Encumbrance record (an aggregate or entity)
-        var encumbrance = new Domain.Encumbrance.Aggregates.Encumbrance(command.SourceTransactionId, command.Amount, command.GlAccountId, command.CostCenterId);
+        var encumbrance = new Domain.Encumbrance.Aggregates.Encumbrance(budget.BusinessUnitId, command.SourceTransactionId, command.Amount, command.GlAccountId, command.CostCenterId);
 
         // 6. Persist and Dispatch Approval Event (BudgetCheckedEvent)
         using var scope = unitOfWork.Begin();

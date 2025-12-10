@@ -5,14 +5,14 @@ namespace ERP.Finance.Domain.FixedAssetManagement.Events;
 
 public record AssetAcquiredEvent(
     Guid AssetId,
-    Guid BusinessUnitId, // New property
+    Guid BusinessUnitId,
     string TagNumber,
-    string Description, // Added for clarity in event
+    string Description,
     Money AcquisitionCost,
     DateTime AcquisitionDate,
-    Guid AssetAccountId, // GL Account (e.g., Computer Equipment)
-    Guid DepreciationExpenseAccountId, // Added for clarity in event
-    Guid AccumulatedDepreciationAccountId, // Added for clarity in event
+    Guid AssetAccountId, 
+    Guid DepreciationExpenseAccountId,
+    Guid AccumulatedDepreciationAccountId,
     Guid? CostCenterId
 ) : IDomainEvent
 {

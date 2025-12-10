@@ -1,11 +1,11 @@
 using ERP.Core.Events;
 using ERP.Finance.Domain.Shared.ValueObjects;
-using System;
 
 namespace ERP.Finance.Domain.FixedAssetManagement.Events;
 
 public record AssetTransferredEvent(
     Guid AssetId,
+    Guid BusinessUnitId,
     DateTime TransferDate,
     Guid? OldCostCenterId,
     Guid? NewCostCenterId,

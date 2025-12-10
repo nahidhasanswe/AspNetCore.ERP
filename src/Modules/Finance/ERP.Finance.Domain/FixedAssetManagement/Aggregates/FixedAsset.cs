@@ -3,7 +3,6 @@ using ERP.Core.Exceptions;
 using ERP.Finance.Domain.FixedAssetManagement.Enums;
 using ERP.Finance.Domain.FixedAssetManagement.Events;
 using ERP.Finance.Domain.Shared.ValueObjects;
-using System;
 
 namespace ERP.Finance.Domain.FixedAssetManagement.Aggregates;
 
@@ -105,6 +104,7 @@ public class FixedAsset : AggregateRoot
 
         AddDomainEvent(new AssetTransferredEvent(
             this.Id,
+            this.BusinessUnitId,
             transferDate,
             oldCostCenterId,
             newCostCenterId,
@@ -129,6 +129,7 @@ public class FixedAsset : AggregateRoot
         
         AddDomainEvent(new AssetImpairedEvent(
             this.Id,
+            this.BusinessUnitId,
             impairmentDate,
             impairmentLossAmount,
             impairmentLossAccountId,
@@ -172,6 +173,7 @@ public class FixedAsset : AggregateRoot
         // Raise an event for GL posting (e.g., write off remaining book value)
         AddDomainEvent(new AssetRetiredEvent(
             this.Id,
+            this.BusinessUnitId,
             retirementDate,
             AcquisitionCost,
             TotalAccumulatedDepreciation,
@@ -215,7 +217,7 @@ public class FixedAsset : AggregateRoot
         // 3. Raise Domain Event for GL posting
         AddDomainEvent(new DepreciationPostedEvent(
             this.Id,
-            this.BusinessUnitId,
+            this.BusinessUnitId, // Pass BusinessUnitId
             depreciationAmount,
             periodDate,
             this.DepreciationExpenseAccountId,

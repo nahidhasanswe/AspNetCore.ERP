@@ -14,7 +14,8 @@ public class RunDepreciationCommandHandler(IFixedAssetRepository fixedAssetRepos
         using var scope = unitOfWork.Begin();
 
         var activeAssets = (await fixedAssetRepository.ListAllAsync(cancellationToken))
-            .Where(asset => asset.Status == FixedAssetStatus.Active || asset.Status == FixedAssetStatus.UnderDepreciation)
+            .Where(asset => asset.BusinessUnitId == command.BusinessUnitId && // Filter by BusinessUnitId
+                            (asset.Status == FixedAssetStatus.Active || asset.Status == FixedAssetStatus.UnderDepreciation))
             .ToList();
 
         foreach (var asset in activeAssets)

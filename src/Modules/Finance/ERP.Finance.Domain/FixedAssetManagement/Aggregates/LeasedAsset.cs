@@ -20,6 +20,7 @@ public enum LeaseStatus
 
 public class LeasedAsset : AggregateRoot
 {
+    public Guid BusinessUnitId { get; private set; }
     public Guid AssetId { get; private set; } // Link to a FixedAsset if tracked there
     public string LeaseAgreementNumber { get; private set; }
     public string Lessor { get; private set; }
@@ -31,8 +32,9 @@ public class LeasedAsset : AggregateRoot
 
     private LeasedAsset() { }
 
-    public LeasedAsset(Guid assetId, string leaseAgreementNumber, string lessor, LeaseType type, DateTime startDate, DateTime endDate, Money monthlyPayment) : base(Guid.NewGuid())
+    public LeasedAsset(Guid businessUnitId, Guid assetId, string leaseAgreementNumber, string lessor, LeaseType type, DateTime startDate, DateTime endDate, Money monthlyPayment) : base(Guid.NewGuid())
     {
+        BusinessUnitId = businessUnitId;
         AssetId = assetId;
         LeaseAgreementNumber = leaseAgreementNumber;
         Lessor = lessor;

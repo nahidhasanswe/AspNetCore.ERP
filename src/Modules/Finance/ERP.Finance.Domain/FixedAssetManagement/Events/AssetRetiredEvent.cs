@@ -1,11 +1,11 @@
 using ERP.Core.Events;
 using ERP.Finance.Domain.Shared.ValueObjects;
-using System;
 
 namespace ERP.Finance.Domain.FixedAssetManagement.Events;
 
 public record AssetRetiredEvent(
     Guid AssetId,
+    Guid BusinessUnitId, // New property
     DateTime RetirementDate,
     Money AcquisitionCost,
     decimal TotalAccumulatedDepreciation,

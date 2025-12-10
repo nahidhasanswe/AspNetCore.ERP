@@ -1,7 +1,6 @@
 using ERP.Core.Aggregates;
 using ERP.Core.Exceptions;
 using ERP.Finance.Domain.Shared.ValueObjects;
-using System;
 
 namespace ERP.Finance.Domain.FixedAssetManagement.Aggregates;
 
@@ -15,6 +14,7 @@ public enum MaintenanceStatus
 
 public class AssetMaintenanceRecord : AggregateRoot
 {
+    public Guid BusinessUnitId { get; private set; }
     public Guid AssetId { get; private set; }
     public DateTime ScheduledDate { get; private set; }
     public DateTime? CompletionDate { get; private set; }
@@ -25,8 +25,9 @@ public class AssetMaintenanceRecord : AggregateRoot
 
     private AssetMaintenanceRecord() { }
 
-    public AssetMaintenanceRecord(Guid assetId, DateTime scheduledDate, string description, Money cost, string performedBy) : base(Guid.NewGuid())
+    public AssetMaintenanceRecord(Guid businessUnitId, Guid assetId, DateTime scheduledDate, string description, Money cost, string performedBy) : base(Guid.NewGuid())
     {
+        BusinessUnitId = businessUnitId;
         AssetId = assetId;
         ScheduledDate = scheduledDate;
         Description = description;

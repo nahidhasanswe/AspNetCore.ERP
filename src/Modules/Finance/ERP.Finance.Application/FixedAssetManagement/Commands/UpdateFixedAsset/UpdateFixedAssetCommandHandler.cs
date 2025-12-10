@@ -17,6 +17,11 @@ public class UpdateFixedAssetCommandHandler(IFixedAssetRepository fixedAssetRepo
         {
             return Result.Failure("Fixed Asset not found.");
         }
+        
+        if (fixedAsset.BusinessUnitId != command.BusinessUnitId)
+        {
+            return Result.Failure("Fixed Asset does not belong to the specified Business Unit.");
+        }
 
         fixedAsset.Update(
             command.Description,

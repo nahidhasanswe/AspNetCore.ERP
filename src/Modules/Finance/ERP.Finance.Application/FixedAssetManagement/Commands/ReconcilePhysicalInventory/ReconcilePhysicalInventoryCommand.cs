@@ -6,5 +6,6 @@ namespace ERP.Finance.Application.FixedAssetManagement.Commands.ReconcilePhysica
 
 public class ReconcilePhysicalInventoryCommand : IRequest<Result>
 {
+    public Guid BusinessUnitId { get; set; } 
     public Guid RecordId { get; set; }
 }

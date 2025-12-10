@@ -20,6 +20,11 @@ public class UpdateAssetLocationCommandHandler(
             return Result.Failure("Fixed Asset not found.");
         }
 
+        if (fixedAsset.BusinessUnitId != command.BusinessUnitId)
+        {
+            return Result.Failure("Fixed Asset does not belong to the specified Business Unit.");
+        }
+
         // Assuming the Update method in FixedAsset can handle location updates
         fixedAsset.Update(
             fixedAsset.Description, // Keep existing description

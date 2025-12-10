@@ -20,6 +20,11 @@ public class HardCloseFiscalPeriodCommandHandler(
             return Result.Failure("Fiscal Period not found.");
         }
 
+        if (fiscalPeriod.BusinessUnitId != command.BusinessUnitId)
+        {
+            return Result.Failure("Fiscal Period does not belong to the specified Business Unit.");
+        }
+
         fiscalPeriod.HardClose();
 
         await fiscalPeriodRepository.UpdateAsync(fiscalPeriod, cancellationToken);

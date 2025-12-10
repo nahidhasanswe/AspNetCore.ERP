@@ -20,6 +20,11 @@ public class RenewAssetInsurancePolicyCommandHandler(
             return Result.Failure("Asset Insurance Policy not found.");
         }
 
+        if (policy.BusinessUnitId != command.BusinessUnitId)
+        {
+            return Result.Failure("Asset Insurance Policy does not belong to the specified Business Unit.");
+        }
+
         policy.Renew(
             command.NewEndDate,
             command.NewCoverageAmount,

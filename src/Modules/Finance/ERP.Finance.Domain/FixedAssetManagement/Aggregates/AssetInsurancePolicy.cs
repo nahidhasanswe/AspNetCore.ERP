@@ -14,6 +14,7 @@ public enum PolicyStatus
 
 public class AssetInsurancePolicy : AggregateRoot
 {
+    public Guid BusinessUnitId { get; private set; }
     public Guid AssetId { get; private set; }
     public string PolicyNumber { get; private set; }
     public string Insurer { get; private set; }
@@ -25,8 +26,9 @@ public class AssetInsurancePolicy : AggregateRoot
 
     private AssetInsurancePolicy() { }
 
-    public AssetInsurancePolicy(Guid assetId, string policyNumber, string insurer, DateTime startDate, DateTime endDate, Money coverageAmount, Money premiumAmount) : base(Guid.NewGuid())
+    public AssetInsurancePolicy(Guid businessUnitId, Guid assetId, string policyNumber, string insurer, DateTime startDate, DateTime endDate, Money coverageAmount, Money premiumAmount) : base(Guid.NewGuid())
     {
+        BusinessUnitId = businessUnitId;
         AssetId = assetId;
         PolicyNumber = policyNumber;
         Insurer = insurer;

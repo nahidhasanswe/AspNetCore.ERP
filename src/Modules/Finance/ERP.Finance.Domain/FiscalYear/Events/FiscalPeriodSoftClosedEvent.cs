@@ -1,10 +1,10 @@
 using ERP.Core.Events;
-using System;
 
 namespace ERP.Finance.Domain.FiscalYear.Events;
 
 public record FiscalPeriodSoftClosedEvent(
     Guid FiscalPeriodId,
+    Guid BusinessUnitId, // New property
     string PeriodName,
     DateTime StartDate,
     DateTime EndDate

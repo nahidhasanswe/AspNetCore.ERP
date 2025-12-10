@@ -27,6 +27,19 @@ public class AdjustAssetFromInventoryCommandHandler(
             return Result.Failure("Fixed Asset not found.");
         }
 
+        if (record.BusinessUnitId != command.BusinessUnitId)
+        {
+            return Result.Failure("Physical Inventory Record does not belong to the specified Business Unit.");
+        }
+        if (asset.BusinessUnitId != command.BusinessUnitId)
+        {
+            return Result.Failure("Fixed Asset does not belong to the specified Business Unit.");
+        }
+        if (record.AssetId != asset.Id)
+        {
+            return Result.Failure("Physical Inventory Record does not match the specified Asset.");
+        }
+
         // Update asset's location
         asset.Update(
             asset.Description,

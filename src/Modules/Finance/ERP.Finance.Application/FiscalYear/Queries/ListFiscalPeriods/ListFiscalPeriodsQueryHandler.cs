@@ -13,6 +13,11 @@ public class ListFiscalPeriodsQueryHandler(IFiscalPeriodRepository fiscalPeriodR
 
         var filteredPeriods = allPeriods.AsQueryable();
 
+        if (request.BusinessUnitId.HasValue)
+        {
+            filteredPeriods = filteredPeriods.Where(p => p.BusinessUnitId == request.BusinessUnitId.Value);
+        }
+
         if (request.Year.HasValue)
         {
             filteredPeriods = filteredPeriods.Where(p => p.StartDate.Year == request.Year.Value);

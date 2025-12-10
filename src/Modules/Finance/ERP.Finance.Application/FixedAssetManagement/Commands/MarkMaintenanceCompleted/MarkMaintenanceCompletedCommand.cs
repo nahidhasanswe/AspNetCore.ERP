@@ -6,6 +6,7 @@ namespace ERP.Finance.Application.FixedAssetManagement.Commands.MarkMaintenanceC
 
 public class MarkMaintenanceCompletedCommand : IRequest<Result>
 {
+    public Guid BusinessUnitId { get; set; }
     public Guid MaintenanceRecordId { get; set; }
     public DateTime CompletionDate { get; set; }
 }

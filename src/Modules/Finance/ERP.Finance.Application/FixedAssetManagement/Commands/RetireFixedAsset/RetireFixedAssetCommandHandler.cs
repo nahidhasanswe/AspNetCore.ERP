@@ -18,6 +18,11 @@ public class RetireFixedAssetCommandHandler(IFixedAssetRepository fixedAssetRepo
             return Result.Failure("Fixed Asset not found.");
         }
 
+        if (fixedAsset.BusinessUnitId != command.BusinessUnitId)
+        {
+            return Result.Failure("Fixed Asset does not belong to the specified Business Unit.");
+        }
+
         fixedAsset.Retire(
             command.RetirementDate,
             command.Reason

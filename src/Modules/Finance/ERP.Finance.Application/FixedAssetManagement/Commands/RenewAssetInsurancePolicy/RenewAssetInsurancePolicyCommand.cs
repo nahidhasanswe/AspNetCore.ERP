@@ -7,6 +7,7 @@ namespace ERP.Finance.Application.FixedAssetManagement.Commands.RenewAssetInsura
 
 public class RenewAssetInsurancePolicyCommand : IRequest<Result>
 {
+    public Guid BusinessUnitId { get; set; }
     public Guid PolicyId { get; set; }
     public DateTime NewEndDate { get; set; }
     public Money NewCoverageAmount { get; set; }

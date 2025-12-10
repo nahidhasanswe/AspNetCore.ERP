@@ -18,6 +18,11 @@ public class TransferAssetCommandHandler(IFixedAssetRepository fixedAssetReposit
             return Result.Failure("Fixed Asset not found.");
         }
 
+        if (fixedAsset.BusinessUnitId != command.BusinessUnitId)
+        {
+            return Result.Failure("Fixed Asset does not belong to the specified Business Unit.");
+        }
+
         fixedAsset.Transfer(command.NewCostCenterId, command.TransferDate);
 
         await fixedAssetRepository.UpdateAsync(fixedAsset, cancellationToken);

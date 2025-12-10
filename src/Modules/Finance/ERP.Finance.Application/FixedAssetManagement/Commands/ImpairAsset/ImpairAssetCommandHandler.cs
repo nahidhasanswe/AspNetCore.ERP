@@ -18,6 +18,11 @@ public class ImpairAssetCommandHandler(IFixedAssetRepository fixedAssetRepositor
             return Result.Failure("Fixed Asset not found.");
         }
 
+        if (fixedAsset.BusinessUnitId != command.BusinessUnitId)
+        {
+            return Result.Failure("Fixed Asset does not belong to the specified Business Unit.");
+        }
+
         fixedAsset.Impair(
             command.ImpairmentDate,
             command.ImpairmentLossAmount,

@@ -2,28 +2,20 @@ using ERP.Core;
 using ERP.Core.Behaviors;
 using ERP.Core.Uow;
 using ERP.Finance.Domain.FixedAssetManagement.Aggregates;
-using MediatR;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace ERP.Finance.Application.FixedAssetManagement.Commands.RecordPhysicalInventory;
 
-public class RecordPhysicalInventoryCommandHandler : IRequestCommandHandler<RecordPhysicalInventoryCommand, Guid>
+public class RecordPhysicalInventoryCommandHandler(
+    IPhysicalInventoryRecordRepository recordRepository,
+    IUnitOfWorkManager unitOfWork)
+    : IRequestCommandHandler<RecordPhysicalInventoryCommand, Guid>
 {
-    private readonly IPhysicalInventoryRecordRepository _recordRepository;
-    private readonly IUnitOfWorkManager _unitOfWork;
-
-    public RecordPhysicalInventoryCommandHandler(IPhysicalInventoryRecordRepository recordRepository, IUnitOfWorkManager unitOfWork)
-    {
-        _recordRepository = recordRepository;
-        _unitOfWork = unitOfWork;
-    }
-
     public async Task<Result<Guid>> Handle(RecordPhysicalInventoryCommand command, CancellationToken cancellationToken)
     {
-        using var scope = _unitOfWork.Begin();
+        using var scope = unitOfWork.Begin();
 
         var record = new PhysicalInventoryRecord(
+            command.BusinessUnitId, // Pass BusinessUnitId
             command.AssetId,
             command.CountDate,
             command.CountedLocation,
@@ -31,7 +23,7 @@ public class RecordPhysicalInventoryCommandHandler : IRequestCommandHandler<Reco
             command.Notes
         );
 
-        await _recordRepository.AddAsync(record, cancellationToken);
+        await recordRepository.AddAsync(record, cancellationToken);
         await scope.SaveChangesAsync(cancellationToken);
 
         return Result.Success(record.Id);
