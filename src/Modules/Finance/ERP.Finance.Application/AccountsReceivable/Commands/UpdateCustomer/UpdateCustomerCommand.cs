@@ -7,6 +7,7 @@ namespace ERP.Finance.Application.AccountsReceivable.Commands.UpdateCustomer;
 
 public class UpdateCustomerCommand : IRequest<Result>
 {
+    public Guid BusinessUnitId { get; set; } // New property
     public Guid CustomerId { get; set; }
     public string Name { get; set; }
     public string ContactEmail { get; set; }

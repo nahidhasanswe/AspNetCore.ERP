@@ -1,5 +1,5 @@
 using ERP.Core.Uow;
-using ERP.Finance.Domain.Events;
+using ERP.Finance.Domain.AccountsPayable.Events;
 using ERP.Finance.Domain.FiscalYear.Aggregates;
 using ERP.Finance.Domain.GeneralLedger.Aggregates;
 using ERP.Finance.Domain.GeneralLedger.Services;

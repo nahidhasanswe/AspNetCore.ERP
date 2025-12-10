@@ -7,6 +7,7 @@ namespace ERP.Finance.Application.AccountsReceivable.Commands.IssueCustomerCredi
 
 public class IssueCustomerCreditMemoCommand : IRequest<Result<Guid>>
 {
+    public Guid BusinessUnitId { get; set; } // New property
     public Guid CustomerId { get; set; }
     public Money Amount { get; set; }
     public DateTime MemoDate { get; set; }

@@ -1,18 +1,15 @@
 using ERP.Core.Aggregates;
 using ERP.Core.Exceptions;
 using ERP.Finance.Domain.AccountsReceivable.Events;
-using ERP.Finance.Domain.Events; // Corrected using statement for InvoiceIssuedEvent
 using ERP.Finance.Domain.Shared.Enums;
 using ERP.Finance.Domain.Shared.ValueObjects;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using ERP.Finance.Domain.AccountsPayable.Events;
 
 namespace ERP.Finance.Domain.AccountsReceivable.Aggregates;
 
 public class CustomerInvoice : AggregateRoot
 {
-    public Guid BusinessUnitId { get; set; }
+    public Guid BusinessUnitId { get; private set; } // New property
     public Guid CustomerId { get; private set; }
     public DateTime IssueDate { get; private set; }
     public DateTime DueDate { get; private set; }
@@ -40,7 +37,7 @@ public class CustomerInvoice : AggregateRoot
     private CustomerInvoice() { }
 
     // Static factory method to create a draft invoice
-    public static CustomerInvoice CreateDraft(Guid customerId, string invoiceNumber, Guid arControlAccountId, DateTime dueDate, Guid? costCenterId, IEnumerable<CustomerInvoiceLineItem> lineItems)
+    public static CustomerInvoice CreateDraft(Guid businessUnitId, Guid customerId, string invoiceNumber, Guid arControlAccountId, DateTime dueDate, Guid? costCenterId, IEnumerable<CustomerInvoiceLineItem> lineItems)
     {
         if (string.IsNullOrWhiteSpace(invoiceNumber)) throw new ArgumentException("Invoice number is required.");
         if (arControlAccountId == Guid.Empty) throw new ArgumentException("AR Control GL account is required.");
@@ -49,6 +46,7 @@ public class CustomerInvoice : AggregateRoot
         var invoice = new CustomerInvoice
         {
             Id = Guid.NewGuid(),
+            BusinessUnitId = businessUnitId, // Set new property
             CustomerId = customerId,
             InvoiceNumber = invoiceNumber,
             ARControlAccountId = arControlAccountId,
@@ -149,6 +147,7 @@ public class CustomerInvoice : AggregateRoot
         // Raise event for GL reversal
         AddDomainEvent(new InvoiceCancelledEvent(
             this.Id,
+            this.BusinessUnitId,
             this.TotalAmount,
             this.ARControlAccountId,
             this.LineItems.Select(li => new CustomerInvoiceLineItemProjection(li.LineAmount, li.RevenueAccountId, li.Description, li.CostCenterId)).ToList(),
@@ -179,6 +178,7 @@ public class CustomerInvoice : AggregateRoot
         // Raise event for GL posting
         AddDomainEvent(new InvoiceAdjustedEvent(
             this.Id,
+            this.BusinessUnitId,
             adjustmentAmount,
             reason,
             this.ARControlAccountId,
@@ -215,6 +215,7 @@ public class CustomerInvoice : AggregateRoot
         AddDomainEvent(new CustomerCreditAppliedToInvoiceEvent(
             InvoiceId: this.Id,
             CreditMemoId: creditMemo.Id,
+            BusinessUnitId: this.BusinessUnitId,
             AmountApplied: amountToApply,
             AppliedDate: DateTime.UtcNow,
             ARControlAccountId: this.ARControlAccountId
@@ -243,6 +244,7 @@ public class CustomerInvoice : AggregateRoot
         // Raise event for GL reversal (Debit Cash, Credit AR)
         AddDomainEvent(new PaymentUnappliedEvent(
             InvoiceId: this.Id,
+            BusinessUnitId: this.BusinessUnitId,
             AmountUnapplied: amountToUnapply,
             UnappliedDate: DateTime.UtcNow,
             ARControlAccountId: this.ARControlAccountId
@@ -352,7 +354,12 @@ public class CustomerInvoice : AggregateRoot
             this.Status = InvoiceStatus.Closed;
 
         AddDomainEvent(new DeductionAppliedToInvoiceEvent(
-            this.Id, amount, reasonCode, this.ARControlAccountId, deductionExpenseAccountId, this.BusinessUnitId
+            this.Id,
+            this.BusinessUnitId,
+            amount,
+            reasonCode,
+            this.ARControlAccountId,
+            deductionExpenseAccountId
         ));
     }
 }

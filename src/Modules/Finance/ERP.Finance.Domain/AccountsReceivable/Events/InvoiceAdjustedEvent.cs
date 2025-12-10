@@ -5,6 +5,7 @@ namespace ERP.Finance.Domain.AccountsReceivable.Events;
 
 public record InvoiceAdjustedEvent(
     Guid InvoiceId,
+    Guid BusinessUnitId, // New property
     Money AdjustmentAmount,
     string Reason,
     Guid ARControlAccountId,

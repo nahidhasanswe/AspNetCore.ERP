@@ -7,6 +7,7 @@ namespace ERP.Finance.Application.AccountsReceivable.Commands.CreateCashReceipt;
 
 public class CreateCashReceiptCommand : IRequest<Result<Guid>>
 {
+    public Guid BusinessUnitId { get; set; } // New property
     public Guid CustomerId { get; set; }
     public DateTime ReceiptDate { get; set; }
     public Money ReceivedAmount { get; set; }

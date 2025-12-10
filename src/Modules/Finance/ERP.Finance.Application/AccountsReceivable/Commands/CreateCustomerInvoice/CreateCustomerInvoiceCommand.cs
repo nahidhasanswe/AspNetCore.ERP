@@ -8,6 +8,7 @@ namespace ERP.Finance.Application.AccountsReceivable.Commands.CreateCustomerInvo
 
 public class CreateCustomerInvoiceCommand : IRequest<Result<Guid>>
 {
+    public Guid BusinessUnitId { get; set; } // New property
     public Guid CustomerId { get; set; }
     public string InvoiceNumber { get; set; }
     public Guid ARControlAccountId { get; set; } // GL Account for Accounts Receivable

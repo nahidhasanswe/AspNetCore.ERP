@@ -2,28 +2,20 @@ using ERP.Core;
 using ERP.Core.Behaviors;
 using ERP.Core.Uow;
 using ERP.Finance.Domain.AccountsReceivable.Aggregates;
-using MediatR;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace ERP.Finance.Application.AccountsReceivable.Commands.CreateCashReceipt;
 
-public class CreateCashReceiptCommandHandler : IRequestCommandHandler<CreateCashReceiptCommand, Guid>
+public class CreateCashReceiptCommandHandler(
+    ICashReceiptRepository cashReceiptRepository,
+    IUnitOfWorkManager unitOfWork)
+    : IRequestCommandHandler<CreateCashReceiptCommand, Guid>
 {
-    private readonly ICashReceiptRepository _cashReceiptRepository;
-    private readonly IUnitOfWorkManager _unitOfWork;
-
-    public CreateCashReceiptCommandHandler(ICashReceiptRepository cashReceiptRepository, IUnitOfWorkManager unitOfWork)
-    {
-        _cashReceiptRepository = cashReceiptRepository;
-        _unitOfWork = unitOfWork;
-    }
-
     public async Task<Result<Guid>> Handle(CreateCashReceiptCommand command, CancellationToken cancellationToken)
     {
-        using var scope = _unitOfWork.Begin();
+        using var scope = unitOfWork.Begin();
 
         var cashReceipt = CashReceipt.Create(
+            command.BusinessUnitId,
             command.CustomerId,
             command.ReceiptDate,
             command.ReceivedAmount,
@@ -31,7 +23,7 @@ public class CreateCashReceiptCommandHandler : IRequestCommandHandler<CreateCash
             command.CashAccountId
         );
 
-        await _cashReceiptRepository.AddAsync(cashReceipt, cancellationToken);
+        await cashReceiptRepository.AddAsync(cashReceipt, cancellationToken);
         await scope.SaveChangesAsync(cancellationToken);
 
         return Result.Success(cashReceipt.Id);

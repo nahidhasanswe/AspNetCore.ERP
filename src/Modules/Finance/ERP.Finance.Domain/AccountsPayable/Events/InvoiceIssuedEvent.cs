@@ -1,8 +1,7 @@
 using ERP.Core.Events;
-using ERP.Finance.Domain.AccountsPayable.Events;
 using ERP.Finance.Domain.Shared.ValueObjects;
 
-namespace ERP.Finance.Domain.Events;
+namespace ERP.Finance.Domain.AccountsPayable.Events;
 
 public record InvoiceIssuedEvent(
     Guid InvoiceId,

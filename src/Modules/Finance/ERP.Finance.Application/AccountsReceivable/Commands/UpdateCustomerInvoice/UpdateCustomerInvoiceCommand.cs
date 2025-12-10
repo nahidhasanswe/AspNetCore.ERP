@@ -6,6 +6,7 @@ namespace ERP.Finance.Application.AccountsReceivable.Commands.UpdateCustomerInvo
 
 public class UpdateCustomerInvoiceCommand : IRequest<Result>
 {
+    public Guid BusinessUnitId { get; set; } // New property
     public Guid InvoiceId { get; set; }
     public DateTime NewDueDate { get; set; }
     public Guid? NewCostCenterId { get; set; }

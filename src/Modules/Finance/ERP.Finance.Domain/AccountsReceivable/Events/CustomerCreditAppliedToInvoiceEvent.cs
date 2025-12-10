@@ -1,12 +1,12 @@
 using ERP.Core.Events;
 using ERP.Finance.Domain.Shared.ValueObjects;
-using System;
 
 namespace ERP.Finance.Domain.AccountsReceivable.Events;
 
 public record CustomerCreditAppliedToInvoiceEvent(
     Guid InvoiceId,
     Guid CreditMemoId,
+    Guid BusinessUnitId, // New property
     Money AmountApplied,
     DateTime AppliedDate,
     Guid ARControlAccountId

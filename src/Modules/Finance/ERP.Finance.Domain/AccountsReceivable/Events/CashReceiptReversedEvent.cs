@@ -6,6 +6,7 @@ namespace ERP.Finance.Domain.AccountsReceivable.Events;
 public record CashReceiptReversedEvent(
     Guid ReceiptId,
     Guid CustomerId,
+    Guid BusinessUnitId, // New property
     Money TotalReceivedAmount,
     Guid CashAccountId,
     string TransactionReference,

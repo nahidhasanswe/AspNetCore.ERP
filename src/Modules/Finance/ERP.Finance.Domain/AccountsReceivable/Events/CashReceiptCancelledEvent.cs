@@ -6,6 +6,7 @@ namespace ERP.Finance.Domain.AccountsReceivable.Events;
 public record CashReceiptCancelledEvent(
     Guid ReceiptId,
     Guid CustomerId,
+    Guid BusinessUnitId, // New property
     Money Amount,
     Guid CashAccountId,
     string TransactionReference,

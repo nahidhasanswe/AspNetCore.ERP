@@ -15,6 +15,7 @@ public enum CustomerCreditMemoStatus
 
 public class CustomerCreditMemo : AggregateRoot
 {
+    public Guid BusinessUnitId { get; private set; } // New property
     public Guid CustomerId { get; private set; }
     public Money OriginalAmount { get; private set; }
     public Money AvailableAmount { get; private set; }
@@ -24,10 +25,11 @@ public class CustomerCreditMemo : AggregateRoot
 
     private CustomerCreditMemo() { }
 
-    public CustomerCreditMemo(Guid customerId, Money amount, DateTime memoDate, string reason) : base(Guid.NewGuid())
+    public CustomerCreditMemo(Guid businessUnitId, Guid customerId, Money amount, DateTime memoDate, string reason) : base(Guid.NewGuid())
     {
         if (amount.Amount <= 0) throw new ArgumentException("Credit memo amount must be positive.");
         
+        BusinessUnitId = businessUnitId; // Set new property
         CustomerId = customerId;
         OriginalAmount = amount;
         AvailableAmount = amount;

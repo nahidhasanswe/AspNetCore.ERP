@@ -29,6 +29,7 @@ public class RecordCashReceiptCommandHandler(
 
         // 2. Execute Domain Logic: Create the CashReceipt Aggregate
         var receipt = CashReceipt.Create(
+            command.BusinessUnitId, // Pass BusinessUnitId
             command.CustomerId, 
             command.ReceiptDate, 
             receivedAmount, 

@@ -1,12 +1,11 @@
 using ERP.Core.Events;
 using ERP.Finance.Domain.Shared.ValueObjects;
-using System;
-using System.Collections.Generic;
 
 namespace ERP.Finance.Domain.AccountsReceivable.Events;
 
 public record CashReceiptBatchPostedEvent(
     Guid BatchId,
+    Guid BusinessUnitId, // New property
     DateTime BatchDate,
     Guid CashAccountId,
     Money TotalBatchAmount,

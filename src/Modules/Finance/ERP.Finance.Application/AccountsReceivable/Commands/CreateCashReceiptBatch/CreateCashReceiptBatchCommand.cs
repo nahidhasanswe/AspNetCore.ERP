@@ -6,6 +6,7 @@ namespace ERP.Finance.Application.AccountsReceivable.Commands.CreateCashReceiptB
 
 public class CreateCashReceiptBatchCommand : IRequest<Result<Guid>>
 {
+    public Guid BusinessUnitId { get; set; } // New property
     public DateTime BatchDate { get; set; }
     public Guid CashAccountId { get; set; }
     public string Reference { get; set; }

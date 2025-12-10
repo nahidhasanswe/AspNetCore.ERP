@@ -1,13 +1,12 @@
 using ERP.Core.Events;
 using ERP.Finance.Domain.Shared.ValueObjects;
-using System;
-using System.Collections.Generic;
-using ERP.Finance.Domain.Events;
+using ERP.Finance.Domain.AccountsPayable.Events;
 
 namespace ERP.Finance.Domain.AccountsReceivable.Events;
 
 public record InvoiceCancelledEvent(
     Guid InvoiceId,
+    Guid BusinessUnitId, // New property
     Money TotalAmount,
     Guid ARControlAccountId,
     IEnumerable<CustomerInvoiceLineItemProjection> LineItems,

@@ -3,6 +3,7 @@ using ERP.Core.Behaviors;
 namespace ERP.Finance.Application.AccountsReceivable.Commands.CashReceipts;
 
 public record RecordCashReceiptCommand(
+    Guid BusinessUnitId,
     Guid CustomerId,
     decimal Amount,
     string Currency,

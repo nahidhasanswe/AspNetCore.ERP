@@ -1,10 +1,7 @@
 using ERP.Core;
-using ERP.Core.Behaviors;
 using ERP.Core.Uow;
 using ERP.Finance.Domain.AccountsReceivable.Aggregates;
 using MediatR;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace ERP.Finance.Application.AccountsReceivable.Commands.UpdateCustomerInvoice;
 
@@ -21,6 +18,14 @@ public class UpdateCustomerInvoiceCommandHandler(
         if (invoice == null)
         {
             return Result.Failure("Customer Invoice not found.");
+        }
+
+        // No direct change to BusinessUnitId as it's immutable on the aggregate.
+        // Validation for BusinessUnitId (e.g., ensuring the invoice belongs to the command's BU)
+        // would typically happen here or in a pre-handler.
+        if (invoice.BusinessUnitId != command.BusinessUnitId)
+        {
+            return Result.Failure("Invoice does not belong to the specified Business Unit.");
         }
 
         invoice.Update(command.NewDueDate, command.NewCostCenterId);

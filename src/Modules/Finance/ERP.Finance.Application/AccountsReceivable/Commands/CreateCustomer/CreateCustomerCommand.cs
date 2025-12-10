@@ -7,6 +7,7 @@ namespace ERP.Finance.Application.AccountsReceivable.Commands.CreateCustomer;
 
 public class CreateCustomerCommand : IRequest<Result<Guid>>
 {
+    public Guid BusinessUnitId { get; set; } // New property
     public string Name { get; set; }
     public string ContactEmail { get; set; }
     public AddressDto BillingAddress { get; set; }

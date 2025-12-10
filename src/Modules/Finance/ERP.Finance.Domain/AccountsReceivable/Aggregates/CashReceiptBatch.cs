@@ -18,6 +18,7 @@ public enum CashReceiptBatchStatus
 
 public class CashReceiptBatch : AggregateRoot
 {
+    public Guid BusinessUnitId { get; private set; } // New property
     public DateTime BatchDate { get; private set; }
     public Guid CashAccountId { get; private set; } // The GL account to be debited (Bank Account)
     public Money TotalBatchAmount { get; private set; }
@@ -29,8 +30,9 @@ public class CashReceiptBatch : AggregateRoot
 
     private CashReceiptBatch() { }
 
-    public CashReceiptBatch(DateTime batchDate, Guid cashAccountId, string reference) : base(Guid.NewGuid())
+    public CashReceiptBatch(Guid businessUnitId, DateTime batchDate, Guid cashAccountId, string reference) : base(Guid.NewGuid())
     {
+        BusinessUnitId = businessUnitId; // Set new property
         BatchDate = batchDate;
         CashAccountId = cashAccountId;
         Reference = reference;
@@ -45,6 +47,8 @@ public class CashReceiptBatch : AggregateRoot
         if (receipt.Status != ReceiptStatus.Unapplied && receipt.Status != ReceiptStatus.PartiallyApplied)
             throw new DomainException("Only unapplied or partially applied receipts can be added to a batch.");
         if (_receiptIds.Contains(receipt.Id)) return; // Idempotency
+        if (receipt.BusinessUnitId != this.BusinessUnitId)
+            throw new DomainException("Cannot add receipts from different business units to the same batch.");
 
         // Ensure currency consistency
         if (TotalBatchAmount.Amount == 0)
@@ -87,6 +91,7 @@ public class CashReceiptBatch : AggregateRoot
         // Raise event for GL posting
         AddDomainEvent(new CashReceiptBatchPostedEvent(
             this.Id,
+            this.BusinessUnitId,
             this.BatchDate,
             this.CashAccountId,
             this.TotalBatchAmount,

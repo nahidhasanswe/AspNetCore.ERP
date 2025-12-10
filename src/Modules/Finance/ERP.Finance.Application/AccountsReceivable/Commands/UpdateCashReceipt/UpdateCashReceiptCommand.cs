@@ -7,6 +7,7 @@ namespace ERP.Finance.Application.AccountsReceivable.Commands.UpdateCashReceipt;
 
 public class UpdateCashReceiptCommand : IRequest<Result>
 {
+    public Guid BusinessUnitId { get; set; } // New property
     public Guid CashReceiptId { get; set; }
     public DateTime NewReceiptDate { get; set; }
     public Money NewReceivedAmount { get; set; }

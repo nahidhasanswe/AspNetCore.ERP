@@ -1,21 +1,12 @@
 using ERP.Finance.Application.GeneralLedger.Commands.CreateJournal;
 using ERP.Finance.Domain.AccountsReceivable.Events;
 using MediatR;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace ERP.Finance.Application.GeneralLedger.EventHandlers;
 
-public class CashReceiptRefundedEventHandler : INotificationHandler<CashReceiptRefundedEvent>
+public class CashReceiptRefundedEventHandler(IMediator mediator) : INotificationHandler<CashReceiptRefundedEvent>
 {
-    private readonly IMediator _mediator;
     // In a real system, you'd need the AR Control Account.
-
-    public CashReceiptRefundedEventHandler(IMediator mediator)
-    {
-        _mediator = mediator;
-    }
 
     public async Task Handle(CashReceiptRefundedEvent notification, CancellationToken cancellationToken)
     {
@@ -51,6 +42,6 @@ public class CashReceiptRefundedEventHandler : INotificationHandler<CashReceiptR
             }
         };
 
-        await _mediator.Send(createJournalEntryCommand, cancellationToken);
+        await mediator.Send(createJournalEntryCommand, cancellationToken);
     }
 }

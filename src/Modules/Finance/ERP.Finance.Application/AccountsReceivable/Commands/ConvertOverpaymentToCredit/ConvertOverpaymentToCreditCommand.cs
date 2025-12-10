@@ -1,12 +1,12 @@
 using ERP.Core;
 using ERP.Finance.Domain.Shared.ValueObjects;
 using MediatR;
-using System;
 
 namespace ERP.Finance.Application.AccountsReceivable.Commands.ConvertOverpaymentToCredit;
 
 public class ConvertOverpaymentToCreditCommand : IRequest<Result<Guid>>
 {
+    public Guid BusinessUnitId { get; set; }
     public Guid CashReceiptId { get; set; }
     public Money AmountToConvert { get; set; }
     public string Reason { get; set; }
