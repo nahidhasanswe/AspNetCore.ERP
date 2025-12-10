@@ -19,6 +19,11 @@ public class ConvertToCommitmentCommandHandler(
         {
             return Result.Failure("Encumbrance not found.");
         }
+        
+        if (encumbrance.BusinessUnitId != command.BusinessUnitId)
+        {
+            return Result.Failure("Encumbrance does not belong to the specified Business Unit.");
+        }
 
         var result = encumbrance.ConvertToCommitment(command.NewAmount);
         if (result.IsFailure)

@@ -20,6 +20,11 @@ public class AdjustEncumbranceCommandHandler(
             return Result.Failure("Encumbrance not found.");
         }
 
+        if (encumbrance.BusinessUnitId != command.BusinessUnitId)
+        {
+            return Result.Failure("Encumbrance does not belong to the specified Business Unit.");
+        }
+
         encumbrance.Adjust(command.NewAmount);
 
         await encumbranceRepository.UpdateAsync(encumbrance, cancellationToken);

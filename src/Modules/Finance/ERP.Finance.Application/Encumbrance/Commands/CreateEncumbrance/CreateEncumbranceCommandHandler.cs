@@ -38,6 +38,7 @@ public class CreateEncumbranceCommandHandler(
 
         // 2. Create the Encumbrance aggregate
         var encumbrance = new Domain.Encumbrance.Aggregates.Encumbrance(
+            command.BusinessUnitId,
             command.SourceTransactionId,
             command.Amount,
             command.GlAccountId,

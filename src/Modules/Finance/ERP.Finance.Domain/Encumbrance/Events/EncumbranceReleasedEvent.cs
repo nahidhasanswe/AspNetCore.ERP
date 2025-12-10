@@ -5,6 +5,7 @@ namespace ERP.Finance.Domain.Encumbrance.Events;
 
 public record EncumbranceReleasedEvent(
     Guid EncumbranceId,
+    Guid BusinessUnitId, // New property
     Money Amount,
     Guid GlAccountId,
     Guid? CostCenterId

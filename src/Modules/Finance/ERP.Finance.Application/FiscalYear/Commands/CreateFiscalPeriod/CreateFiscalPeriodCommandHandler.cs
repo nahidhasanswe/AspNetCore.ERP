@@ -14,7 +14,12 @@ public class CreateFiscalPeriodCommandHandler(
     {
         using var scope = unitOfWork.Begin();
 
-        var fiscalPeriod = new FiscalPeriod(command.Name, command.StartDate, command.EndDate, command.BusinessUnitId);
+        var fiscalPeriod = new FiscalPeriod(
+            command.BusinessUnitId, // Pass BusinessUnitId
+            command.Name,
+            command.StartDate,
+            command.EndDate
+        );
 
         await fiscalPeriodRepository.AddAsync(fiscalPeriod, cancellationToken);
         await scope.SaveChangesAsync(cancellationToken);

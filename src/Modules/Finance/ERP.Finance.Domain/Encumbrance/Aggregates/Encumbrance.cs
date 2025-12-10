@@ -9,7 +9,7 @@ namespace ERP.Finance.Domain.Encumbrance.Aggregates;
 
 public class Encumbrance : AuditableAggregateRoot
 {
-    public Guid BusinessUnitId { get; set; }
+    public Guid BusinessUnitId { get; private set; } // New property
     public Guid SourceTransactionId { get; private set; } // e.g., Purchase Requisition ID
     public Money Amount { get; private set; }            // The amount reserved/committed
     public Guid GlAccountId { get; private set; }        // The budget line item account
@@ -20,8 +20,9 @@ public class Encumbrance : AuditableAggregateRoot
 
     private Encumbrance() { }
 
-    public Encumbrance(Guid sourceTransactionId, Money amount, Guid glAccountId, Guid? costCenterId) : base(Guid.NewGuid())
+    public Encumbrance(Guid businessUnitId, Guid sourceTransactionId, Money amount, Guid glAccountId, Guid? costCenterId) : base(Guid.NewGuid())
     {
+        BusinessUnitId = businessUnitId; // Set new property
         SourceTransactionId = sourceTransactionId;
         Amount = amount;
         GlAccountId = glAccountId;
@@ -58,7 +59,7 @@ public class Encumbrance : AuditableAggregateRoot
         if (Status != EncumbranceStatus.Open)
             throw new InvalidOperationException("Only open encumbrances can be released.");
         Status = EncumbranceStatus.Released;
-        AddDomainEvent(new EncumbranceReleasedEvent(this.Id, this.Amount, this.GlAccountId, this.CostCenterId));
+        AddDomainEvent(new EncumbranceReleasedEvent(this.Id, this.BusinessUnitId, this.Amount, this.GlAccountId, this.CostCenterId));
     }
 
     public void Liquidate(Guid actualTransactionId)
@@ -66,7 +67,7 @@ public class Encumbrance : AuditableAggregateRoot
         if (Status != EncumbranceStatus.Open && Status != EncumbranceStatus.Committed) // Assuming Committed is a status
             throw new InvalidOperationException("Only open or committed encumbrances can be liquidated.");
         Status = EncumbranceStatus.Liquidated;
-        AddDomainEvent(new EncumbranceLiquidatedEvent(this.Id, this.Amount, this.GlAccountId, this.CostCenterId, actualTransactionId));
+        AddDomainEvent(new EncumbranceLiquidatedEvent(this.Id, this.BusinessUnitId, this.Amount, this.GlAccountId, this.CostCenterId, actualTransactionId));
     }
 
     public void Close()
@@ -74,7 +75,7 @@ public class Encumbrance : AuditableAggregateRoot
         if (Status != EncumbranceStatus.Open && Status != EncumbranceStatus.Committed)
             throw new InvalidOperationException("Only open or committed encumbrances can be closed.");
         Status = EncumbranceStatus.Closed;
-        AddDomainEvent(new EncumbranceClosedEvent(this.Id, this.Amount, this.GlAccountId, this.CostCenterId));
+        AddDomainEvent(new EncumbranceClosedEvent(this.Id, this.BusinessUnitId, this.Amount, this.GlAccountId, this.CostCenterId));
     }
 
     public void Cancel()
@@ -82,7 +83,7 @@ public class Encumbrance : AuditableAggregateRoot
         if (Status != EncumbranceStatus.Open && Status != EncumbranceStatus.Committed)
             throw new InvalidOperationException("Only open or committed encumbrances can be cancelled.");
         Status = EncumbranceStatus.Canceled;
-        AddDomainEvent(new EncumbranceCanceledEvent(this.Id, this.Amount, this.GlAccountId, this.CostCenterId));
+        AddDomainEvent(new EncumbranceCanceledEvent(this.Id, this.BusinessUnitId, this.Amount, this.GlAccountId, this.CostCenterId));
     }
 
     public void Adjust(Money newAmount)
@@ -93,6 +94,6 @@ public class Encumbrance : AuditableAggregateRoot
         var adjustmentAmount = new Money(newAmount.Amount - this.Amount.Amount, newAmount.Currency);
         this.Amount = newAmount;
         
-        AddDomainEvent(new EncumbranceAdjustedEvent(this.Id, adjustmentAmount, this.GlAccountId, this.CostCenterId));
+        AddDomainEvent(new EncumbranceAdjustedEvent(this.Id, this.BusinessUnitId, adjustmentAmount, this.GlAccountId, this.CostCenterId));
     }
 }
