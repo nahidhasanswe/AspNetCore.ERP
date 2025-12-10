@@ -11,4 +11,14 @@
       <ProjectReference Include="..\ERP.Finance.Domain\ERP.Finance.Domain.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="AccountsReceivable\Configurations\" />
+      <Folder Include="Budgeting\Configurations\" />
+      <Folder Include="Encumbrance\Configurations\" />
+      <Folder Include="FiscalYear\Configurations\" />
+      <Folder Include="FixedAssetManagement\Configurations\" />
+      <Folder Include="GeneralLedger\Configurations\" />
+      <Folder Include="TaxManagement\Configurations\" />
+    </ItemGroup>
+
 </Project>
