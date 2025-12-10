@@ -1,11 +1,11 @@
 using ERP.Finance.Application.GeneralLedger.Commands.CreateJournal;
 using ERP.Finance.Domain.AccountsReceivable.Events;
-using ERP.Finance.Domain.GeneralLedger.Service;
+using ERP.Finance.Domain.GeneralLedger.Services;
 using MediatR;
 
 namespace ERP.Finance.Application.GeneralLedger.EventHandlers;
 
-public class UnappliedCashGlPostingHandler(IMediator mediator, IGlConfigurationService glConfig)
+public class UnappliedCashGlPostingHandler(IMediator mediator, IGLConfigurationService glConfig)
     : INotificationHandler<UnappliedCashCreatedEvent>
 {
     // Injected

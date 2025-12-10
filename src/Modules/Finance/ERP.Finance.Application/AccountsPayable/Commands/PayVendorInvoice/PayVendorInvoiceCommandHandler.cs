@@ -2,13 +2,14 @@ using ERP.Core;
 using ERP.Core.Exceptions;
 using ERP.Core.Uow;
 using ERP.Finance.Domain.AccountsPayable.Aggregates;
-using ERP.Finance.Domain.Shared.ValueObjects;
+using ERP.Finance.Domain.GeneralLedger.Services;
 using MediatR;
 
 namespace ERP.Finance.Application.AccountsPayable.Commands.PayVendorInvoice;
 
 public class PayVendorInvoiceCommandHandler (
         IVendorInvoiceRepository repository,
+        IGLConfigurationService glConfigurationService,
         IUnitOfWorkManager unitOfWork
     )
     : IRequestHandler<PayVendorInvoiceCommand, Result<bool>>
@@ -17,21 +18,9 @@ public class PayVendorInvoiceCommandHandler (
     {
         var invoice = await repository.GetByIdAsync(command.InvoiceId, cancellationToken);
         
-        if (invoice == null) return Result.Success(false);
-        
-        PaymentMethod paymentMethod;
-        try
-        {
-            // Use the Value Object to determine the GL Clearing Account ID
-            paymentMethod = PaymentMethod.FromCode(command.PaymentMethodCode);
-        }
-        catch (ArgumentException ex)
-        {
-            return Result.Failure<bool>($"Invalid payment method: {ex.Message}");
-        }
-        
-        // The GL account the payment is drawn from (the Credit side of the entry)
-        Guid paymentAccountId = paymentMethod.ClearingAccountId;
+        if (invoice == null) return Result.Failure<bool>($"Invoice not found");
+
+        Guid paymentAccountId = await glConfigurationService.GetPaymentClearingAccountId(invoice.BusinessUnitId, invoice.TotalAmount.Currency, cancellationToken);
         
         // CORE AP DOMAIN LOGIC
         try

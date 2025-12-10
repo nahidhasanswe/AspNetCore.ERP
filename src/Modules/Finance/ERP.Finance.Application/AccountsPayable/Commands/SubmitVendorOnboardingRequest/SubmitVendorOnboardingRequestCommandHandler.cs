@@ -7,20 +7,14 @@ using System.Threading.Tasks;
 
 namespace ERP.Finance.Application.AccountsPayable.Commands.SubmitVendorOnboardingRequest;
 
-public class SubmitVendorOnboardingRequestCommandHandler : IRequestCommandHandler<SubmitVendorOnboardingRequestCommand, Guid>
+public class SubmitVendorOnboardingRequestCommandHandler(
+    IVendorOnboardingRequestRepository onboardingRepository,
+    IUnitOfWorkManager unitOfWork)
+    : IRequestCommandHandler<SubmitVendorOnboardingRequestCommand, Guid>
 {
-    private readonly IVendorOnboardingRequestRepository _onboardingRepository;
-    private readonly IUnitOfWorkManager _unitOfWork;
-
-    public SubmitVendorOnboardingRequestCommandHandler(IVendorOnboardingRequestRepository onboardingRepository, IUnitOfWorkManager unitOfWork)
-    {
-        _onboardingRepository = onboardingRepository;
-        _unitOfWork = unitOfWork;
-    }
-
     public async Task<Result<Guid>> Handle(SubmitVendorOnboardingRequestCommand command, CancellationToken cancellationToken)
     {
-        using var scope = _unitOfWork.Begin();
+        using var scope = unitOfWork.Begin();
 
         var request = new VendorOnboardingRequest(
             command.ProposedName,
@@ -33,7 +27,7 @@ public class SubmitVendorOnboardingRequestCommandHandler : IRequestCommandHandle
         );
         request.SubmitForApproval(); // Automatically submit upon creation
 
-        await _onboardingRepository.AddAsync(request, cancellationToken);
+        await onboardingRepository.AddAsync(request, cancellationToken);
         await scope.SaveChangesAsync(cancellationToken);
 
         return Result.Success(request.Id);

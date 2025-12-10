@@ -62,7 +62,7 @@ public class RecurringInvoice : AggregateRoot
         // Further logic might be needed to adjust NextOccurrenceDate based on current date and new interval
     }
 
-    public VendorInvoice GenerateInvoice(DateTime generationDate)
+    public VendorInvoice? GenerateInvoice(DateTime generationDate)
     {
         if (!IsActive || generationDate.Date != NextOccurrenceDate.Date)
             return null;

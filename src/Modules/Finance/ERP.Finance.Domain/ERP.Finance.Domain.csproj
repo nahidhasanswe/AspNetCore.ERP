@@ -17,6 +17,7 @@
       <Folder Include="FixedAssetManagement\Service\" />
       <Folder Include="FixedAssetManagement\Specifications\" />
       <Folder Include="GeneralLedger\Entities\" />
+      <Folder Include="GeneralLedger\Service\" />
       <Folder Include="GeneralLedger\Specifications\" />
       <Folder Include="TaxManagement\Specifications\" />
     </ItemGroup>

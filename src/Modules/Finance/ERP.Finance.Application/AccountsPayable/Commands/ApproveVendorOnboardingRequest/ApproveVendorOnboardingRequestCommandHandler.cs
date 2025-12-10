@@ -1,5 +1,6 @@
 using ERP.Core;
 using ERP.Core.Behaviors;
+using ERP.Core.Exceptions;
 using ERP.Core.Uow;
 using ERP.Finance.Application.AccountsPayable.Commands.CreateVendor;
 using ERP.Finance.Domain.AccountsPayable.Aggregates;
@@ -49,12 +50,19 @@ public class ApproveVendorOnboardingRequestCommandHandler(
             return Result.Failure<Unit>($"Failed to create vendor: {createVendorResult.Error}");
         }
 
-        request.Approve(createVendorResult.Value); // Pass the newly created VendorId
-        request.MarkAsCompleted(); // Mark the request as completed
+        try
+        {
+            request.Approve(createVendorResult.Value); // Pass the newly created VendorId
+            request.MarkAsCompleted(); // Mark the request as completed
 
-        await onboardingRepository.UpdateAsync(request, cancellationToken);
-        await scope.SaveChangesAsync(cancellationToken);
+            await onboardingRepository.UpdateAsync(request, cancellationToken);
+            await scope.SaveChangesAsync(cancellationToken);
 
-        return Result.Success(Unit.Value);
+            return Result.Success(Unit.Value);
+        }
+        catch (DomainException ex)
+        {
+            return Result.Failure<Unit>(ex.Message);
+        }
     }
 }

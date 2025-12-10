@@ -1,5 +1,3 @@
-using System;
-
 namespace ERP.Finance.Application.AccountsPayable.DTOs;
 
 public class VendorAgingDto

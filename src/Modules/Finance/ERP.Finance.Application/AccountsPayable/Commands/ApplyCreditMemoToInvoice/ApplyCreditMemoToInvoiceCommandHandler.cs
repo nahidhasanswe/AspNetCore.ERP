@@ -26,8 +26,6 @@ public class ApplyCreditMemoToInvoiceCommandHandler(
         {
             return Result.Failure<Unit>("Credit Memo not found.");
         }
-        
-        
 
         invoice.ApplyCredit(creditMemo, command.AmountToApply);
 

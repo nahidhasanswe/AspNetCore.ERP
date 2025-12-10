@@ -1,7 +1,7 @@
 using ERP.Core;
 using ERP.Core.Uow;
 using ERP.Finance.Domain.AccountsReceivable.Aggregates;
-using ERP.Finance.Domain.GeneralLedger.Service;
+using ERP.Finance.Domain.GeneralLedger.Services;
 using MediatR;
 
 namespace ERP.Finance.Application.AccountsReceivable.Commands.WriteOff;
@@ -9,7 +9,7 @@ namespace ERP.Finance.Application.AccountsReceivable.Commands.WriteOff;
 public class WriteOffBadDebtCommandHandler(
     ICustomerInvoiceRepository repository,
     IUnitOfWorkManager unitOfWork,
-    IGlConfigurationService glConfig // Service to get the Bad Debt GL Account ID
+    IGLConfigurationService glConfig // Service to get the Bad Debt GL Account ID
 ) : IRequestHandler<WriteOffBadDebtCommand, Result<bool>>
 {
     public async Task<Result<bool>> Handle(WriteOffBadDebtCommand command, CancellationToken cancellationToken)

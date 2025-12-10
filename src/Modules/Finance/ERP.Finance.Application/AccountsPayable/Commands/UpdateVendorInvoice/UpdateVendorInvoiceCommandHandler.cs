@@ -20,10 +20,6 @@ public class UpdateVendorInvoiceCommandHandler(
             return Result.Failure("Invoice not found.");
         }
 
-        // No direct change to BusinessUnitId as it's immutable on the aggregate.
-        // Validation for BusinessUnitId (e.g., ensuring the invoice belongs to the command's BU)
-        // would typically happen here or in a pre-handler.
-
         var newLineItems = command.NewLineItems.Select(dto => 
             new InvoiceLineItem(dto.Description, dto.LineAmount, dto.ExpenseAccountId, dto.CostCenterId))
             .ToList();

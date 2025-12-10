@@ -1,28 +1,16 @@
 using ERP.Finance.Application.GeneralLedger.Commands.CreateJournal;
 using ERP.Finance.Domain.AccountsPayable.Events;
-using ERP.Finance.Domain.GeneralLedger.Service; // Assuming IGlConfigurationService is here
 using MediatR;
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
+using ERP.Finance.Domain.GeneralLedger.Services;
 
 namespace ERP.Finance.Application.GeneralLedger.EventHandlers;
 
-public class DebitMemoAppliedEventHandler : INotificationHandler<DebitMemoAppliedEvent>
+public class DebitMemoAppliedEventHandler(IMediator mediator, IGLConfigurationService glConfig)
+    : INotificationHandler<DebitMemoAppliedEvent>
 {
-    private readonly IMediator _mediator;
-    private readonly IGlConfigurationService _glConfig; // Injected
-
-    public DebitMemoAppliedEventHandler(IMediator mediator, IGlConfigurationService glConfig)
-    {
-        _mediator = mediator;
-        _glConfig = glConfig;
-    }
-
     public async Task Handle(DebitMemoAppliedEvent notification, CancellationToken cancellationToken)
     {
-        Guid debitMemoClearingAccountId = await _glConfig.DebitMemoClearingAccountIdAsync(notification.Amount.Currency, cancellationToken);
+        Guid debitMemoClearingAccountId = await glConfig.DebitMemoClearingAccountIdAsync(notification.Amount.Currency, cancellationToken);
 
         var createJournalEntryCommand = new CreateJournalEntryCommand
         {
@@ -49,6 +37,6 @@ public class DebitMemoAppliedEventHandler : INotificationHandler<DebitMemoApplie
             }
         };
 
-        await _mediator.Send(createJournalEntryCommand, cancellationToken);
+        await mediator.Send(createJournalEntryCommand, cancellationToken);
     }
 }

@@ -4,6 +4,7 @@ using ERP.Core.Exceptions;
 using ERP.Core.Uow;
 using ERP.Finance.Application.TaxManagement.Commands.CalculateTax;
 using ERP.Finance.Domain.AccountsPayable.Aggregates;
+using ERP.Finance.Domain.GeneralLedger.Services;
 using MediatR;
 
 namespace ERP.Finance.Application.AccountsPayable.Commands.CreateVendorInvoice;
@@ -11,6 +12,7 @@ namespace ERP.Finance.Application.AccountsPayable.Commands.CreateVendorInvoice;
 public class CreateVendorInvoiceCommandHandler(
     IVendorInvoiceRepository invoiceRepository,
     IVendorRepository vendorRepository,
+    IGLConfigurationService glConfigService,
     IMediator mediator,
     IUnitOfWorkManager unitOfWork)
     : IRequestCommandHandler<CreateVendorInvoiceCommand, Guid>
@@ -22,11 +24,8 @@ public class CreateVendorInvoiceCommandHandler(
 
         var dueDate = DateTime.UtcNow.AddDays(30);
         
-        //Guid apControlAccountId = await glConfigService.GetAPControlAccountAsync(command.BusinessUnitId);
-
-        // Config driven value
-        var apControlAccountId = Guid.NewGuid(); // This should ideally be fetched based on BusinessUnitId
-
+        Guid apControlAccountId = await glConfigService.GetAPControlAccountAsync(command.BusinessUnitId, command.Currency, cancellationToken);
+        
         // 1. Create the Aggregate Root
         var invoice = VendorInvoice.CreateNonPOInvoice(
             command.BusinessUnitId, // Pass BusinessUnitId
@@ -39,7 +38,7 @@ public class CreateVendorInvoiceCommandHandler(
             command.InvoiceLines.Select(l => new InvoiceLineItem(l.Description, l.LineAmount, l.ExpenseAccountId, l.CostCenterId))
         );
         
-        // 2. Integration: Calculate and record tax liability (TM module)
+        // Integration: Calculate and record tax liability (TM module)
         // This command dispatches an event that GL will subscribe to.
         await mediator.Send(new CalculateAndRecordTaxCommand
         {

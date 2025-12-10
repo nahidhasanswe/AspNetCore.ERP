@@ -22,7 +22,7 @@ public class GenerateRecurringInvoicesCommandHandler(
         foreach (var recurringInvoice in recurringInvoicesDue)
         {
             var newInvoice = recurringInvoice.GenerateInvoice(today);
-            if (newInvoice != null)
+            if (newInvoice is not null)
             {
                 await vendorInvoiceRepository.AddAsync(newInvoice, cancellationToken);
                 await recurringInvoiceRepository.UpdateAsync(recurringInvoice, cancellationToken); // Update next occurrence date
