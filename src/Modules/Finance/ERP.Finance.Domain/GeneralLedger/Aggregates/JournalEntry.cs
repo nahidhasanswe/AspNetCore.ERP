@@ -8,7 +8,7 @@ namespace ERP.Finance.Domain.GeneralLedger.Aggregates;
 
 public class JournalEntry : AggregateRoot
 {
-    public Guid BusinessUnitId { get; set; }
+    public Guid BusinessUnitId { get; private set; } // New property
     public DateTime PostingDate { get; private set; }
     public string Description { get; private set; }
     public string ReferenceNumber { get; private set; }
@@ -19,8 +19,9 @@ public class JournalEntry : AggregateRoot
 
     private JournalEntry() { } 
 
-    public JournalEntry(string description, string referenceNumber, Guid businessUnitId) : base(Guid.NewGuid())
+    public JournalEntry(Guid businessUnitId, string description, string referenceNumber) : base(Guid.NewGuid())
     {
+        BusinessUnitId = businessUnitId; // Set new property
         Description = description;
         ReferenceNumber = referenceNumber;
         IsPosted = false;
@@ -49,6 +50,12 @@ public class JournalEntry : AggregateRoot
         {
             if (period.Status != FiscalYear.Enums.PeriodStatus.Open)
                 throw new DomainException($"Cannot post to a period that is not open. Period '{period.Name}' has status '{period.Status}'.");
+        }
+
+        // Validate that all accounts in the journal entry belong to the same BusinessUnitId
+        if (_lines.Any(line => !accountValidator.IsAccountInBusinessUnit(line.AccountId, this.BusinessUnitId)))
+        {
+            throw new DomainException("All accounts in the journal entry must belong to the same Business Unit as the journal entry.");
         }
 
         var totalDebits = _lines.Where(l => l.IsDebit).Sum(l => l.Amount.Amount);

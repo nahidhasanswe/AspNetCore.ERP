@@ -1,23 +1,11 @@
 using ERP.Finance.Application.GeneralLedger.Commands.CreateJournal;
 using ERP.Finance.Domain.AccountsReceivable.Events;
 using MediatR;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace ERP.Finance.Application.GeneralLedger.EventHandlers;
 
-public class InvoiceCancelledEventHandler : INotificationHandler<InvoiceCancelledEvent>
+public class InvoiceCancelledEventHandler(IMediator mediator) : INotificationHandler<InvoiceCancelledEvent>
 {
-    private readonly IMediator _mediator;
-
-    public InvoiceCancelledEventHandler(IMediator mediator)
-    {
-        _mediator = mediator;
-    }
-
     public async Task Handle(InvoiceCancelledEvent notification, CancellationToken cancellationToken)
     {
         var journalEntries = new List<CreateJournalEntryCommand.LedgerLineDto>();
@@ -48,9 +36,10 @@ public class InvoiceCancelledEventHandler : INotificationHandler<InvoiceCancelle
         {
             PostingDate = notification.CancellationDate,
             Description = $"Journal entry for cancelled customer invoice {notification.InvoiceId}. Reason: {notification.Reason}",
+            BusinessUnitId = notification.BusinessUnitId,
             Lines = journalEntries
         };
 
-        await _mediator.Send(createJournalEntryCommand, cancellationToken);
+        await mediator.Send(createJournalEntryCommand, cancellationToken);
     }
 }

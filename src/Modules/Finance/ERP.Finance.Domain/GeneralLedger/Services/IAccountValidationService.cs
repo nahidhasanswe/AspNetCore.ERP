@@ -7,4 +7,5 @@ namespace ERP.Finance.Domain.GeneralLedger.Services;
 public interface IAccountValidationService
 {
     void ValidatePostingAccount(Guid accountId);
+    bool IsAccountInBusinessUnit(Guid accoountId, Guid businessUnitId);
 }

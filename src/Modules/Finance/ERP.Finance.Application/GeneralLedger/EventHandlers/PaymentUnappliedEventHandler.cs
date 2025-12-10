@@ -7,16 +7,10 @@ using System.Threading.Tasks;
 
 namespace ERP.Finance.Application.GeneralLedger.EventHandlers;
 
-public class PaymentUnappliedEventHandler : INotificationHandler<PaymentUnappliedEvent>
+public class PaymentUnappliedEventHandler(IMediator mediator) : INotificationHandler<PaymentUnappliedEvent>
 {
-    private readonly IMediator _mediator;
     // In a real system, you'd need to retrieve the original CashAccountId from the PaymentReceivedEvent
     // For simplicity, we'll assume a generic Cash Account for reversal.
-
-    public PaymentUnappliedEventHandler(IMediator mediator)
-    {
-        _mediator = mediator;
-    }
 
     public async Task Handle(PaymentUnappliedEvent notification, CancellationToken cancellationToken)
     {
@@ -32,6 +26,7 @@ public class PaymentUnappliedEventHandler : INotificationHandler<PaymentUnapplie
         {
             PostingDate = notification.UnappliedDate,
             Description = $"Journal entry for unapplied payment from invoice {notification.InvoiceId}",
+            BusinessUnitId = notification.BusinessUnitId, // Pass BusinessUnitId
             Lines = new List<CreateJournalEntryCommand.LedgerLineDto>
             {
                 // Debit AR Control Account (increases AR liability)
@@ -53,6 +48,6 @@ public class PaymentUnappliedEventHandler : INotificationHandler<PaymentUnapplie
             }
         };
 
-        await _mediator.Send(createJournalEntryCommand, cancellationToken);
+        await mediator.Send(createJournalEntryCommand, cancellationToken);
     }
 }

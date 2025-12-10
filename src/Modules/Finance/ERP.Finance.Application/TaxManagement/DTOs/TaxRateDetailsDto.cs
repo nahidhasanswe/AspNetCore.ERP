@@ -8,7 +8,5 @@ public record TaxRateDetailsDto(
     string JurisdictionName, // Populated by handler
     decimal Rate,
     DateTime EffectiveDate,
-    Guid TaxPayableAccountId,
-    string TaxPayableAccountName, // Populated by handler
     bool IsActive
 );

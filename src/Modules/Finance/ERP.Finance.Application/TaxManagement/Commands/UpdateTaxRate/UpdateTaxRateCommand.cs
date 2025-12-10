@@ -9,5 +9,5 @@ public class UpdateTaxRateCommand : IRequest<Result>
     public Guid TaxRateId { get; set; }
     public decimal NewRate { get; set; }
     public DateTime NewEffectiveDate { get; set; }
-    public Guid NewTaxPayableAccountId { get; set; }
+    // Removed: public Guid NewTaxPayableAccountId { get; set; }
 }

@@ -46,7 +46,7 @@ public class PerformYearEndCloseCommandHandler(
      var accountBalances = await generalLedgerEntryRepository.GetAccountBalancesForPeriodAsync(period.StartDate, period.EndDate, cancellationToken);
      var balanceMap = accountBalances.ToDictionary(x => x.AccountId);
  
-     var closingEntry = new JournalEntry($"Year-End Closing Entry for {period.Name}", $"YEC-{period.Name}", retainedEarningsAccount.BusinessUnitId);
+     var closingEntry = new JournalEntry(command.BusinessUnitId, $"Year-End Closing Entry for {period.Name}", $"YEC-{period.Name}");
 
      decimal netIncomeLoss = 0;
 
@@ -64,6 +64,7 @@ public class PerformYearEndCloseCommandHandler(
              var money = new Money(absBalance, "USD"); 
 
              closingEntry.AddLine(new LedgerLine(
+                 command.BusinessUnitId,
                  closingEntry.Id,
                  account.Id,
                  money,
@@ -85,6 +86,7 @@ public class PerformYearEndCloseCommandHandler(
      var retainedEarningsMoney = new Money(absNetIncomeLoss, "USD"); 
 
      closingEntry.AddLine(new LedgerLine(
+         command.BusinessUnitId,
          closingEntry.Id,
          retainedEarningsAccount.Id,
          retainedEarningsMoney,

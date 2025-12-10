@@ -27,6 +27,7 @@ public class CustomerCreditAppliedToInvoiceEventHandler : INotificationHandler<C
         {
             PostingDate = notification.AppliedDate,
             Description = $"Applied customer credit memo {notification.CreditMemoId} to invoice {notification.InvoiceId}",
+            BusinessUnitId = notification.BusinessUnitId, // Pass BusinessUnitId
             Lines = new List<CreateJournalEntryCommand.LedgerLineDto>
             {
                 // 1. Debit the AR Control Account (reduces AR liability)

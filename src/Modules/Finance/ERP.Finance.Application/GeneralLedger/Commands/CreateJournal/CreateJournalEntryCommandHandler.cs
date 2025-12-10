@@ -30,7 +30,7 @@ public class CreateJournalEntryCommandHandler(
             return Result.Failure<Guid>($"No fiscal period found for date {command.PostingDate.ToShortDateString()}. The Post method will validate if it is open.");
         
         // 1. Create the Aggregate Root
-        var entry = new JournalEntry(command.Description, command.ReferenceNumber, command.BusinessUnitId);
+        var entry = new JournalEntry(command.BusinessUnitId, command.Description, command.ReferenceNumber);
     
         // 2. Map DTOs to Domain Objects and add to the Aggregate
         foreach (var lineDto in command.Lines)
@@ -46,6 +46,7 @@ public class CreateJournalEntryCommandHandler(
 
             // Incorporate ALL new LedgerLine constructor parameters
             var line = new LedgerLine(
+                command.BusinessUnitId, // Pass BusinessUnitId to LedgerLine
                 entry.Id, 
                 lineDto.AccountId, 
                 transactionAmount, 

@@ -22,7 +22,7 @@ public class GetTaxRateByIdQueryHandler(
 
         var jurisdiction = await jurisdictionRepository.GetByIdAsync(taxRate.JurisdictionId, cancellationToken);
         var jurisdictionName = jurisdiction?.Name ?? "Unknown Jurisdiction";
-        var taxPayableAccountName = await glAccountRepository.GetAccountNameAsync(taxRate.TaxPayableAccountId, cancellationToken);
+        // Removed: var taxPayableAccountName = await _glAccountRepository.GetAccountNameByIdAsync(taxRate.TaxPayableAccountId);
 
         var dto = new TaxRateDetailsDto(
             taxRate.Id,
@@ -30,8 +30,8 @@ public class GetTaxRateByIdQueryHandler(
             jurisdictionName,
             taxRate.Rate,
             taxRate.EffectiveDate,
-            taxRate.TaxPayableAccountId,
-            taxPayableAccountName ?? "Unknown Tax Payable Account",
+            // Removed: taxRate.TaxPayableAccountId,
+            // Removed: taxPayableAccountName ?? "Unknown Tax Payable Account",
             taxRate.IsActive
         );
 

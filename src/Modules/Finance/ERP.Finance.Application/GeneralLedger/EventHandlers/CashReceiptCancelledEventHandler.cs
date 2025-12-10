@@ -7,15 +7,8 @@ using System.Threading.Tasks;
 
 namespace ERP.Finance.Application.GeneralLedger.EventHandlers;
 
-public class CashReceiptCancelledEventHandler : INotificationHandler<CashReceiptCancelledEvent>
+public class CashReceiptCancelledEventHandler(IMediator mediator) : INotificationHandler<CashReceiptCancelledEvent>
 {
-    private readonly IMediator _mediator;
-
-    public CashReceiptCancelledEventHandler(IMediator mediator)
-    {
-        _mediator = mediator;
-    }
-
     public async Task Handle(CashReceiptCancelledEvent notification, CancellationToken cancellationToken)
     {
         // This is a reversal of the UnappliedCashCreatedEvent's GL entry:
@@ -32,6 +25,7 @@ public class CashReceiptCancelledEventHandler : INotificationHandler<CashReceipt
         {
             PostingDate = notification.CancellationDate,
             Description = $"Journal entry for cancelled cash receipt {notification.ReceiptId}. Reference: {notification.TransactionReference}",
+            BusinessUnitId = notification.BusinessUnitId, // Pass BusinessUnitId
             Lines = new List<CreateJournalEntryCommand.LedgerLineDto>
             {
                 // Debit AR Control Account (reversing the original credit)
@@ -53,6 +47,6 @@ public class CashReceiptCancelledEventHandler : INotificationHandler<CashReceipt
             }
         };
 
-        await _mediator.Send(createJournalEntryCommand, cancellationToken);
+        await mediator.Send(createJournalEntryCommand, cancellationToken);
     }
 }

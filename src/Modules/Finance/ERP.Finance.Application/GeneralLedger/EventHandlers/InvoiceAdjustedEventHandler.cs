@@ -7,15 +7,8 @@ using System.Threading.Tasks;
 
 namespace ERP.Finance.Application.GeneralLedger.EventHandlers;
 
-public class InvoiceAdjustedEventHandler : INotificationHandler<InvoiceAdjustedEvent>
+public class InvoiceAdjustedEventHandler(IMediator mediator) : INotificationHandler<InvoiceAdjustedEvent>
 {
-    private readonly IMediator _mediator;
-
-    public InvoiceAdjustedEventHandler(IMediator mediator)
-    {
-        _mediator = mediator;
-    }
-
     public async Task Handle(InvoiceAdjustedEvent notification, CancellationToken cancellationToken)
     {
         var journalEntries = new List<CreateJournalEntryCommand.LedgerLineDto>();
@@ -75,9 +68,10 @@ public class InvoiceAdjustedEventHandler : INotificationHandler<InvoiceAdjustedE
         {
             PostingDate = notification.AdjustmentDate,
             Description = $"Journal entry for customer invoice adjustment {notification.InvoiceId}. Reason: {notification.Reason}",
+            BusinessUnitId = notification.BusinessUnitId,
             Lines = journalEntries
         };
 
-        await _mediator.Send(createJournalEntryCommand, cancellationToken);
+        await mediator.Send(createJournalEntryCommand, cancellationToken);
     }
 }

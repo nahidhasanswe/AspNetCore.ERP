@@ -1,78 +1,41 @@
-using ERP.Core.Uow;
+using ERP.Finance.Application.GeneralLedger.Commands.CreateJournal;
 using ERP.Finance.Domain.AccountsReceivable.Events;
-using ERP.Finance.Domain.FiscalYear.Aggregates;
-using ERP.Finance.Domain.GeneralLedger.Aggregates;
-using ERP.Finance.Domain.GeneralLedger.Services;
-using ERP.Finance.Domain.Shared.Currency;
 using MediatR;
 
 namespace ERP.Finance.Application.GeneralLedger.EventHandlers;
 
-public class DeductionAppliedGlPostingHandler(
-    IJournalEntryRepository journalEntryRepository,
-    IUnitOfWorkManager unitOfWork,
-    ICurrencyConversionService currencyConverter,
-    IFiscalPeriodRepository fiscalPeriodRepository,
-    IAccountValidationService accountValidator
-    ) : INotificationHandler<DeductionAppliedToInvoiceEvent>
+public class DeductionAppliedGlPostingHandler(IMediator mediator) : INotificationHandler<DeductionAppliedToInvoiceEvent>
 {
-    private const string SystemBaseCurrency = "USD";
-
     public async Task Handle(DeductionAppliedToInvoiceEvent notification, CancellationToken cancellationToken)
     {
-        var deductionAmount = notification.DeductionAmount;
+        var ledgerLines = new List<CreateJournalEntryCommand.LedgerLineDto>();
 
-        // Fetch the fiscal period for the deduction date. This is now required for posting.
-        var fiscalPeriod = await fiscalPeriodRepository.GetPeriodByDateAsync(notification.OccurredOn, cancellationToken);
-        if (fiscalPeriod is null)
+        // 1. Debit Deduction Expense Account
+        ledgerLines.Add(new CreateJournalEntryCommand.LedgerLineDto
         {
-            // In a real system, you would log this error. An event handler should not throw an exception
-            // that stops the process, but this deduction cannot be posted without a valid period.
-            // Consider moving this to a dead-letter queue for later processing.
-            return; 
-        }
-        
-        var entry = new JournalEntry(
-            $"Deduction Applied to Invoice: {notification.InvoiceId}. Reason Code: {notification.DeductionReasonCode}", 
-            $"{notification.InvoiceId}-{notification.DeductionReasonCode}-{notification.OccurredOn:yyyyMMdd}",
-            notification.BusinessUnitId
-        );
+            AccountId = notification.DeductionExpenseAccountId,
+            Amount = notification.DeductionAmount.Amount,
+            IsDebit = true, // Debit
+            Currency = notification.DeductionAmount.Currency
+        });
 
-        var baseAmount = await currencyConverter.ConvertAsync(
-            source: deductionAmount, 
-            targetCurrency: SystemBaseCurrency,
-            conversionDate: notification.OccurredOn 
-        );
-        
-        // Entry: DEBIT Expense (Increase in Expense, Decrease in Equity)
-        entry.AddLine(new LedgerLine(
-            entry.Id, 
-            notification.DeductionExpenseAccountId, // Specific GL Expense Account ID
-            deductionAmount,
-            baseAmount, 
-            isDebit: true, 
-            description: $"Deduction ({notification.DeductionReasonCode}) for Invoice {notification.InvoiceId}", 
-            costCenterId: null // Cost center determined by GL configuration
-        ));
-        
-        // Entry: CREDIT AR Control (Decrease in Asset)
-        entry.AddLine(new LedgerLine(
-            entry.Id, 
-            notification.ARControlAccountId, // AR Control Account ID
-            deductionAmount, 
-            baseAmount, 
-            isDebit: false, 
-            description: $"Clear AR balance via deduction for Invoice {notification.InvoiceId}", 
-            costCenterId: null
-        ));
-        
-        // Post the entry using the fetched period and the injected validator.
-        entry.Post(fiscalPeriod, accountValidator);
+        // 2. Credit AR Control Account
+        ledgerLines.Add(new CreateJournalEntryCommand.LedgerLineDto
+        {
+            AccountId = notification.ARControlAccountId,
+            Amount = notification.DeductionAmount.Amount,
+            IsDebit = false, // Credit
+            Currency = notification.DeductionAmount.Currency
+        });
 
-        // Persist the Journal Entry
-        using var scope = unitOfWork.Begin();
-        
-        await journalEntryRepository.AddAsync(entry, cancellationToken);
-        await scope.SaveChangesAsync(cancellationToken);
+        var createJournalEntryCommand = new CreateJournalEntryCommand
+        {
+            PostingDate = notification.OccurredOn, // Assuming OccurredOn is the posting date
+            Description = $"Journal entry for deduction applied to invoice {notification.InvoiceId}. Reason: {notification.DeductionReasonCode}",
+            BusinessUnitId = notification.BusinessUnitId, // Pass BusinessUnitId
+            Lines = ledgerLines
+        };
+
+        await mediator.Send(createJournalEntryCommand, cancellationToken);
     }
 }

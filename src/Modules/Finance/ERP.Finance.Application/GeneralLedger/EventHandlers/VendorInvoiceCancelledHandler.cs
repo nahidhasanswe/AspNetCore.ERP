@@ -1,19 +1,13 @@
 using ERP.Finance.Domain.AccountsPayable.Events;
 using ERP.Finance.Domain.FiscalYear.Aggregates;
-using ERP.Finance.Domain.GeneralLedger.Aggregates;
-using ERP.Finance.Domain.GeneralLedger.Services;
-using ERP.Finance.Domain.Shared.Currency;
 using MediatR;
-using ERP.Core.Uow;
+using ERP.Finance.Application.GeneralLedger.Commands.CreateJournal;
 
 namespace ERP.Finance.Application.GeneralLedger.EventHandlers;
 
 public class VendorInvoiceCancelledHandler(
-    IJournalEntryRepository journalEntryRepository,
-    IUnitOfWorkManager unitOfWork,
-    ICurrencyConversionService currencyConverter,
     IFiscalPeriodRepository fiscalPeriodRepository,
-    IAccountValidationService accountValidator)
+    IMediator mediator)
     : INotificationHandler<VendorInvoiceCancelledEvent>
 {
     private const string SystemBaseCurrency = "USD";
@@ -27,62 +21,38 @@ public class VendorInvoiceCancelledHandler(
             return;
         }
 
-        // 1. Create the GL Reversal Aggregate Root
-        var entry = new JournalEntry(
-            $"Reversal of Cancelled Vendor Invoice {notification.InvoiceId} - Reason: {notification.CancellationReason}", 
-            $"CANCEL-{notification.InvoiceId}",
-            notification.BusinessUnitId // Pass BusinessUnitId
-        );
-        
-        // 2. CRITICAL: Calculate the Base Amount for the entire reversal
-        var originalAmount = notification.OriginalTotalAmount;
-        var baseAmount = await currencyConverter.ConvertAsync(
-            source: originalAmount, 
-            targetCurrency: SystemBaseCurrency,
-            conversionDate: notification.CancellationDate // Use cancellation date for reversal rate
-        );
-        
-        // 3. Line Creation: Debit Side (Liability Reduction)
-        // DEBIT: Accounts Payable Control Account (Liability decreases)
-        var debitLine = new LedgerLine(
-            entry.Id, 
-            notification.OriginalApControlAccountId, 
-            originalAmount, 
-            baseAmount, 
-            isDebit: true, 
-            description: "AP Liability Reversal",
-            costCenterId: notification.OriginalLineItems.FirstOrDefault()?.CostCenterId // Use a representative CC
-        ); 
-        entry.AddLine(debitLine);
-        
-        // 4. Line Creation: Credit Side (Expense/Asset Reduction)
-        // CREDIT: Original Expense/Asset Accounts (Original Expense decreases)
-        foreach (var line in notification.OriginalLineItems)
-        {
-            // Calculate base amount for the individual line reversal
-            var lineBaseAmount = await currencyConverter.ConvertAsync(
-                source: line.LineAmount, 
-                targetCurrency: SystemBaseCurrency,
-                conversionDate: notification.CancellationDate
-            );
+        var ledgerLines = new List<CreateJournalEntryCommand.LedgerLineDto>();
 
-            entry.AddLine(new LedgerLine(
-                entry.Id, 
-                line.ExpenseAccountId, 
-                line.LineAmount, 
-                lineBaseAmount, 
-                isDebit: false, 
-                description: $"Reversal: {line.Description}", 
-                line.CostCenterId
-            )); 
+        // 1. Debit the Accounts Payable control account to reverse liability
+        ledgerLines.Add(new CreateJournalEntryCommand.LedgerLineDto
+        {
+            AccountId = notification.OriginalApControlAccountId,
+            Amount = notification.OriginalTotalAmount.Amount,
+            IsDebit = true, // Debit
+            Currency = notification.OriginalTotalAmount.Currency
+        });
+
+        // 2. Credit the original expense accounts from each line item to reverse expense
+        foreach (var lineItem in notification.OriginalLineItems)
+        {
+            ledgerLines.Add(new CreateJournalEntryCommand.LedgerLineDto
+            {
+                AccountId = lineItem.ExpenseAccountId,
+                Amount = lineItem.LineAmount.Amount,
+                IsDebit = false, // Credit
+                Currency = lineItem.LineAmount.Currency,
+                CostCenterId = lineItem.CostCenterId
+            });
         }
 
-        // 5. Finalize and Post
-        entry.Post(fiscalPeriod, accountValidator);
+        var createJournalEntryCommand = new CreateJournalEntryCommand
+        {
+            PostingDate = notification.CancellationDate,
+            Description = $"Journal entry for cancelled invoice {notification.InvoiceId}. Reason: {notification.CancellationReason}",
+            BusinessUnitId = notification.BusinessUnitId, // Pass BusinessUnitId
+            Lines = ledgerLines
+        };
 
-        using var scope = unitOfWork.Begin();
-        
-        await journalEntryRepository.AddAsync(entry, cancellationToken);
-        await scope.SaveChangesAsync(cancellationToken);
+        await mediator.Send(createJournalEntryCommand, cancellationToken);
     }
 }

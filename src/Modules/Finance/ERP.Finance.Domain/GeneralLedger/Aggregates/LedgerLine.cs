@@ -5,6 +5,7 @@ namespace ERP.Finance.Domain.GeneralLedger.Aggregates;
 
 public class LedgerLine : Entity
 {
+    public Guid BusinessUnitId { get; private set; } // New property
     public Guid JournalEntryId { get; private set; }
     public Guid AccountId { get; private set; }
     public Money Amount { get; private set; }
@@ -18,6 +19,7 @@ public class LedgerLine : Entity
     private LedgerLine() { } 
     
     public LedgerLine(
+        Guid businessUnitId, // New property
         Guid journalEntryId, // Added for FK
         Guid accountId, 
         Money amount, 
@@ -30,6 +32,7 @@ public class LedgerLine : Entity
         if (amount.Amount <= 0)
              throw new ArgumentException("Ledger line amount must be positive.");
         
+        BusinessUnitId = businessUnitId; // Set new property
         JournalEntryId = journalEntryId;
         AccountId = accountId;
         Amount = amount;

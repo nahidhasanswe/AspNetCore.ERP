@@ -30,6 +30,7 @@ public class CashReceiptBatchPostedEventHandler : INotificationHandler<CashRecei
         {
             PostingDate = notification.BatchDate,
             Description = $"Journal entry for cash receipt batch {notification.BatchId}. Reference: {notification.Reference}",
+            BusinessUnitId = notification.BusinessUnitId, // Pass BusinessUnitId
             Lines = new List<CreateJournalEntryCommand.LedgerLineDto>
             {
                 // Debit Cash Account (Bank Account)

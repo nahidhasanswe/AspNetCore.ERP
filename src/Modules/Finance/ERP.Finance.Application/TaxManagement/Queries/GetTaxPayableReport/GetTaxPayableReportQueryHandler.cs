@@ -7,36 +7,41 @@ using MediatR;
 namespace ERP.Finance.Application.TaxManagement.Queries.GetTaxPayableReport;
 
 public class GetTaxPayableReportQueryHandler(
-    ITaxRateRepository taxRateRepository,
-    IAccountRepository glAccountRepository,
-    IGLReportingService glReportingService)
+    ITaxJurisdictionRepository jurisdictionRepository,
+    IAccountRepository accountRepository,
+    IGLReportingService glReportingService,
+    IGLConfigurationService glConfigurationService)
     : IRequestHandler<GetTaxPayableReportQuery, Result<IEnumerable<TaxPayableReportDto>>>
 {
     public async Task<Result<IEnumerable<TaxPayableReportDto>>> Handle(GetTaxPayableReportQuery request, CancellationToken cancellationToken)
     {
-        // Get all unique TaxPayableAccountIds from active tax rates
-        var taxPayableAccountIds = (await taxRateRepository.ListAllAsync(cancellationToken))
-            .Where(tr => tr.IsActive)
-            .Select(tr => tr.TaxPayableAccountId)
-            .Distinct()
-            .ToList();
-
         var reportDtos = new List<TaxPayableReportDto>();
 
-        foreach (var accountId in taxPayableAccountIds)
-        {
-            var accountName = await glAccountRepository.GetAccountNameAsync(accountId, cancellationToken);
-            var balance = await glReportingService.GetAccountBalanceAsOfDate(accountId, request.AsOfDate);
+        // Get all active tax jurisdictions
+        var activeJurisdictions = (await jurisdictionRepository.ListAllAsync(cancellationToken))
+            .Where(j => j.IsActive)
+            .ToList();
 
-            if (balance.Amount != 0) // Only show accounts with an outstanding balance
+        foreach (var jurisdiction in activeJurisdictions)
+        {
+            // Dynamically resolve the TaxPayableAccountId for this jurisdiction and business unit
+            var taxPayableAccountId = await glConfigurationService.GetTaxPayableAccountId(jurisdiction.Id, request.BusinessUnitId);
+            
+            if (taxPayableAccountId != Guid.Empty) // Only proceed if an account is configured
             {
-                reportDtos.Add(new TaxPayableReportDto(
-                    accountId,
-                    accountName ?? "Unknown Account",
-                    balance,
-                    balance.Currency,
-                    request.AsOfDate
-                ));
+                var accountName = await accountRepository.GetAccountNameAsync(taxPayableAccountId, cancellationToken);
+                var balance = await glReportingService.GetAccountBalanceAsOfDate(taxPayableAccountId, request.AsOfDate);
+
+                if (balance.Amount != 0) // Only show accounts with an outstanding balance
+                {
+                    reportDtos.Add(new TaxPayableReportDto(
+                        taxPayableAccountId,
+                        accountName ?? "Unknown Account",
+                        balance,
+                        balance.Currency,
+                        request.AsOfDate
+                    ));
+                }
             }
         }
 

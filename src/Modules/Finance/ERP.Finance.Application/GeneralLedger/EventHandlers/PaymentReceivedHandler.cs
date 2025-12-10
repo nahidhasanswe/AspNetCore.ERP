@@ -1,74 +1,43 @@
-using ERP.Core.Uow;
+using ERP.Finance.Application.GeneralLedger.Commands.CreateJournal;
 using ERP.Finance.Domain.AccountsReceivable.Events;
-using ERP.Finance.Domain.FiscalYear.Aggregates;
-using ERP.Finance.Domain.GeneralLedger.Aggregates;
-using ERP.Finance.Domain.GeneralLedger.Services;
-using ERP.Finance.Domain.Shared.Currency;
 using MediatR;
 
 namespace ERP.Finance.Application.GeneralLedger.EventHandlers;
 
-public class PaymentReceivedHandler(
-    IJournalEntryRepository journalEntryRepository,
-    IUnitOfWorkManager unitOfWork,
-    ICurrencyConversionService currencyConverter,
-    IFiscalPeriodRepository fiscalPeriodRepository,
-    IAccountValidationService accountValidator
-    ) : INotificationHandler<PaymentReceivedEvent>
+public class PaymentReceivedHandler(IMediator mediator) : INotificationHandler<PaymentReceivedEvent>
 {
-    private const string SystemBaseCurrency = "USD";
-    
     public async Task Handle(PaymentReceivedEvent notification, CancellationToken cancellationToken)
     {
-        var fiscalPeriod = await fiscalPeriodRepository.GetPeriodByDateAsync(notification.PaymentDate, cancellationToken);
-        if (fiscalPeriod is null)
+        var ledgerLines = new List<CreateJournalEntryCommand.LedgerLineDto>();
+
+        // 1. Debit the Cash/Bank account
+        ledgerLines.Add(new CreateJournalEntryCommand.LedgerLineDto
         {
-            // Log error: Cannot post payment GL as no open fiscal period was found.
-            return;
-        }
+            AccountId = notification.CashAccountId,
+            Amount = notification.AmountReceived.Amount,
+            IsDebit = true, // Debit
+            Currency = notification.AmountReceived.Currency,
+            CostCenterId = notification.CostCenterId
+        });
 
-        var entry = new JournalEntry(
-            $"Cash Receipt for Invoice {notification.InvoiceId}", 
-            notification.Reference,
-            notification.BusinessUnitId
-        );
-        
-        var baseAmount = await currencyConverter.ConvertAsync(
-            source: notification.AmountReceived, // The Money object from the event
-            targetCurrency: SystemBaseCurrency,
-            conversionDate: notification.PaymentDate // Use the date the payment was recorded
-        );
-        
-        // 2. Debit: Increase Asset (Cash/Bank Account)
-        var debitLine = new LedgerLine(
-            entry.Id, 
-            notification.CashAccountId, 
-            notification.AmountReceived, 
-            baseAmount, 
-            isDebit: true, 
-            description: "Cash/Bank Deposit",
-            costCenterId: notification.CostCenterId 
-        ); 
-        
-        // 3. Credit: Decrease Asset (Accounts Receivable - Clearing the liability)
-        var creditLine = new LedgerLine(
-            entry.Id, 
-            notification.ArControlAccountId, 
-            notification.AmountReceived,
-            baseAmount, 
-            isDebit: false, 
-            description: "AR Balance Reduction",
-            costCenterId: notification.CostCenterId
-        );
-        
-        entry.AddLine(debitLine);
-        entry.AddLine(creditLine);
+        // 2. Credit the Accounts Receivable control account
+        ledgerLines.Add(new CreateJournalEntryCommand.LedgerLineDto
+        {
+            AccountId = notification.ArControlAccountId,
+            Amount = notification.AmountReceived.Amount,
+            IsDebit = false, // Credit
+            Currency = notification.AmountReceived.Currency,
+            CostCenterId = notification.CostCenterId
+        });
 
-        entry.Post(fiscalPeriod, accountValidator); 
-        
-        using var scope = unitOfWork.Begin();
-        
-        await journalEntryRepository.AddAsync(entry, cancellationToken);
-        await scope.SaveChangesAsync(cancellationToken);
+        var createJournalEntryCommand = new CreateJournalEntryCommand
+        {
+            PostingDate = notification.PaymentDate,
+            Description = $"Journal entry for payment received for invoice {notification.InvoiceId} via {notification.Reference}",
+            BusinessUnitId = notification.BusinessUnitId, // Pass BusinessUnitId
+            Lines = ledgerLines
+        };
+
+        await mediator.Send(createJournalEntryCommand, cancellationToken);
     }
 }

@@ -13,6 +13,7 @@ public class CreateRecurringJournalEntryCommandHandler(
     public async Task<Result<Guid>> Handle(CreateRecurringJournalEntryCommand command, CancellationToken cancellationToken)
     {
         var entry = new RecurringJournalEntry(
+            command.BusinessUnitId,
             command.Description,
             command.ReferenceNumber,
             command.StartDate,

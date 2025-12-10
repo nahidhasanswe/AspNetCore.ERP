@@ -36,6 +36,7 @@ public class CalculateAndRecordTaxCommandHandler(
         // 2. Calculate Tax
         var calculationResult = await taxCalculationService.CalculateTax(
             jurisdiction.Id,
+            command.BusinessUnitId, // Pass BusinessUnitId to the service
             command.BaseAmount,
             command.TransactionDate
         );

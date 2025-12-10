@@ -1,14 +1,16 @@
 using ERP.Core;
 using MediatR;
 
-namespace ERP.Finance.Application.GeneralLedger.Commands.CreateJournal;
+namespace ERP.Finance.Application.GeneralLedger.Commands.CreateRecurringJournal;
 
-public class CreateJournalEntryCommand : IRequest<Result<Guid>>
+public class CreateRecurringJournalCommand : IRequest<Result<Guid>>
 {
-    public Guid BusinessUnitId { get; set; } // New property
+    public Guid BusinessUnitId { get; set; }
     public string Description { get; set; }
     public string ReferenceNumber { get; set; }
-    public DateTime PostingDate { get; set; }
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
+    public string Frequency { get; set; } // e.g., "Monthly", "Quarterly"
     public List<LedgerLineDto> Lines { get; set; } = new();
 
     public class LedgerLineDto

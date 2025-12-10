@@ -1,81 +1,45 @@
-using ERP.Core.Uow;
+using ERP.Finance.Application.GeneralLedger.Commands.CreateJournal;
 using ERP.Finance.Domain.AccountsPayable.Events;
-using ERP.Finance.Domain.FiscalYear.Aggregates;
-using ERP.Finance.Domain.GeneralLedger.Aggregates;
-using ERP.Finance.Domain.GeneralLedger.Services;
-using ERP.Finance.Domain.Shared.Currency;
 using MediatR;
-
 namespace ERP.Finance.Application.GeneralLedger.EventHandlers;
 
-public class InvoiceIssuedHandler(
-    IJournalEntryRepository journalEntryRepository,
-    IUnitOfWorkManager unitOfWork,
-    ICurrencyConversionService currencyConverter,
-    IFiscalPeriodRepository fiscalPeriodRepository,
-    IAccountValidationService accountValidator
-    ) : INotificationHandler<InvoiceIssuedEvent>
+public class InvoiceIssuedHandler(IMediator mediator) : INotificationHandler<InvoiceIssuedEvent>
 {
-
-    private const string SystemBaseCurrency = "USD";
-    
     public async Task Handle(InvoiceIssuedEvent notification, CancellationToken cancellationToken)
     {
-        var fiscalPeriod = await fiscalPeriodRepository.GetPeriodByDateAsync(notification.OccurredOn, cancellationToken);
-        if (fiscalPeriod is null)
+        var ledgerLines = new List<CreateJournalEntryCommand.LedgerLineDto>();
+
+        // 1. Debit the Accounts Receivable control account
+        ledgerLines.Add(new CreateJournalEntryCommand.LedgerLineDto
         {
-            // Log error: Cannot post invoice GL as no open fiscal period was found.
-            return;
+            AccountId = notification.ARControlAccountId,
+            Amount = notification.Amount.Amount,
+            IsDebit = true, // Debit
+            Currency = notification.Amount.Currency,
+            CostCenterId = notification.CostCenterId
+        });
+
+        // 2. Credit the revenue accounts from each line item
+        foreach (var lineItem in notification.LineItems)
+        {
+            ledgerLines.Add(new CreateJournalEntryCommand.LedgerLineDto
+            {
+                AccountId = lineItem.RevenueAccountId,
+                Amount = lineItem.LineAmount.Amount,
+                IsDebit = false, // Credit
+                Currency = lineItem.LineAmount.Currency,
+                CostCenterId = lineItem.CostCenterId
+            });
         }
 
-        var entry = new JournalEntry(
-            $"Accrual for Customer Invoice {notification.InvoiceId}", 
-            notification.InvoiceId.ToString(),
-            notification.BusinessUnitId
-        );
-        
-        var baseAmount = await currencyConverter.ConvertAsync(
-            source: notification.Amount, // The Money object from the event
-            targetCurrency: SystemBaseCurrency,
-            conversionDate: notification.OccurredOn // Use the invoice date for the rate
-        );
-        
-        // Debit: Increase Asset (Accounts Receivable)
-        var debitLine = new LedgerLine(
-            entry.Id, 
-            notification.ARControlAccountId, 
-            notification.Amount, 
-            baseAmount, 
-            isDebit: true, 
-            description: "Accounts Receivable Control",
-            costCenterId: notification.CostCenterId 
-        );
-        
-        entry.AddLine(debitLine);
-        
-        // 2. CREDIT: Revenue Accounts (Equity Increase)
-        foreach (var line in notification.LineItems)
+        var createJournalEntryCommand = new CreateJournalEntryCommand
         {
-            var baseLineAmount = await currencyConverter.ConvertAsync(
-                source: line.LineAmount, 
-                targetCurrency: SystemBaseCurrency,
-                conversionDate: notification.OccurredOn 
-            );
+            PostingDate = notification.OccurredOn, // Assuming OccurredOn is the posting date
+            Description = $"Journal entry for issued customer invoice {notification.InvoiceId}",
+            BusinessUnitId = notification.BusinessUnitId, // Pass BusinessUnitId
+            Lines = ledgerLines
+        };
 
-            entry.AddLine(new LedgerLine(
-                entry.Id, 
-                line.RevenueAccountId, // Specific Revenue GL Account ID to CREDIT
-                line.LineAmount, baseLineAmount, isDebit: false, 
-                description: $"Revenue for item: {line.Description}", 
-                line.CostCenterId
-            ));
-        }
-
-        entry.Post(fiscalPeriod, accountValidator);
-
-        using var scope = unitOfWork.Begin();
-        
-        await journalEntryRepository.AddAsync(entry, cancellationToken);
-        await scope.SaveChangesAsync(cancellationToken);
+        await mediator.Send(createJournalEntryCommand, cancellationToken);
     }
 }

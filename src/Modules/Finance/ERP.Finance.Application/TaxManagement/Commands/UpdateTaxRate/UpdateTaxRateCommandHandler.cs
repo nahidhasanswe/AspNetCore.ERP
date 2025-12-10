@@ -20,8 +20,7 @@ public class UpdateTaxRateCommandHandler(ITaxRateRepository taxRateRepository, I
 
         taxRate.Update(
             command.NewRate,
-            command.NewEffectiveDate,
-            command.NewTaxPayableAccountId
+            command.NewEffectiveDate
         );
 
         await taxRateRepository.UpdateAsync(taxRate, cancellationToken);

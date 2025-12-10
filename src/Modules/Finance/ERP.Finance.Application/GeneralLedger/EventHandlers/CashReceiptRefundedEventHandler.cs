@@ -21,6 +21,7 @@ public class CashReceiptRefundedEventHandler(IMediator mediator) : INotification
         {
             PostingDate = notification.RefundDate,
             Description = $"Journal entry for refund of cash receipt {notification.ReceiptId}. Reference: {notification.RefundReference}",
+            BusinessUnitId = notification.BusinessUnitId, // Pass BusinessUnitId
             Lines = new List<CreateJournalEntryCommand.LedgerLineDto>
             {
                 // Debit AR Control Account (increases AR liability, reversing original credit)

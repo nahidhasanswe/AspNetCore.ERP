@@ -8,5 +8,6 @@ namespace ERP.Finance.Application.TaxManagement.Queries.GetTaxPayableReport;
 
 public class GetTaxPayableReportQuery : IRequest<Result<IEnumerable<TaxPayableReportDto>>>
 {
+    public Guid BusinessUnitId { get; set; } // New property
     public DateTime AsOfDate { get; set; } = DateTime.UtcNow;
 }

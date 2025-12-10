@@ -34,6 +34,7 @@ public class CashReceiptReversedEventHandler : INotificationHandler<CashReceiptR
         {
             PostingDate = notification.ReversalDate,
             Description = $"Journal entry for reversal of cash receipt {notification.ReceiptId}. Reason: {notification.Reason}",
+            BusinessUnitId = notification.BusinessUnitId, // Pass BusinessUnitId
             Lines = new List<CreateJournalEntryCommand.LedgerLineDto>
             {
                 // Debit AR Control Account (reversing the original credit from cash receipt)
