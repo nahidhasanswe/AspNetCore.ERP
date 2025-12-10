@@ -5,7 +5,7 @@ namespace ERP.Finance.Application.FixedAssetManagement.Commands.UpdateAssetLocat
 
 public class UpdateAssetLocationCommand : IRequest<Result>
 {
-    public Guid BusinessUnitId { get; set; }
+    public Guid BusinessUnitId { get; set; } // New property
     public Guid AssetId { get; set; }
     public string NewLocation { get; set; }
 }
