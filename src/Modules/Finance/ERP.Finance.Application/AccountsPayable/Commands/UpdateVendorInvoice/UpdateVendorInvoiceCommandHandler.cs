@@ -1,10 +1,6 @@
 using ERP.Core;
-using ERP.Core.Behaviors;
 using ERP.Core.Uow;
 using ERP.Finance.Domain.AccountsPayable.Aggregates;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using MediatR;
 
 namespace ERP.Finance.Application.AccountsPayable.Commands.UpdateVendorInvoice;
@@ -12,17 +8,21 @@ namespace ERP.Finance.Application.AccountsPayable.Commands.UpdateVendorInvoice;
 public class UpdateVendorInvoiceCommandHandler(
     IVendorInvoiceRepository invoiceRepository,
     IUnitOfWorkManager unitOfWork)
-    : IRequestCommandHandler<UpdateVendorInvoiceCommand, Unit>
+    : IRequestHandler<UpdateVendorInvoiceCommand, Result>
 {
-    public async Task<Result<Unit>> Handle(UpdateVendorInvoiceCommand command, CancellationToken cancellationToken)
+    public async Task<Result> Handle(UpdateVendorInvoiceCommand command, CancellationToken cancellationToken)
     {
         using var scope = unitOfWork.Begin();
 
         var invoice = await invoiceRepository.GetByIdAsync(command.InvoiceId, cancellationToken);
         if (invoice == null)
         {
-            return Result.Failure<Unit>("Invoice not found.");
+            return Result.Failure("Invoice not found.");
         }
+
+        // No direct change to BusinessUnitId as it's immutable on the aggregate.
+        // Validation for BusinessUnitId (e.g., ensuring the invoice belongs to the command's BU)
+        // would typically happen here or in a pre-handler.
 
         var newLineItems = command.NewLineItems.Select(dto => 
             new InvoiceLineItem(dto.Description, dto.LineAmount, dto.ExpenseAccountId, dto.CostCenterId))
@@ -33,6 +33,6 @@ public class UpdateVendorInvoiceCommandHandler(
         await invoiceRepository.UpdateAsync(invoice, cancellationToken);
         await scope.SaveChangesAsync(cancellationToken);
 
-        return Result.Success(Unit.Value);
+        return Result.Success();
     }
 }

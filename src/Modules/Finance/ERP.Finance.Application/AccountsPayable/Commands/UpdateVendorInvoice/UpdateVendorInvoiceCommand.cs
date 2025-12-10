@@ -1,11 +1,12 @@
+using ERP.Core;
 using ERP.Finance.Domain.Shared.ValueObjects;
 using MediatR;
-using ERP.Core.Behaviors;
 
 namespace ERP.Finance.Application.AccountsPayable.Commands.UpdateVendorInvoice;
 
-public class UpdateVendorInvoiceCommand : IRequestCommand<Unit>
+public class UpdateVendorInvoiceCommand : IRequest<Result>
 {
+    public Guid BusinessUnitId { get; set; } // New property
     public Guid InvoiceId { get; set; }
     public DateTime NewDueDate { get; set; }
     public List<InvoiceLineItemDto> NewLineItems { get; set; } = new();

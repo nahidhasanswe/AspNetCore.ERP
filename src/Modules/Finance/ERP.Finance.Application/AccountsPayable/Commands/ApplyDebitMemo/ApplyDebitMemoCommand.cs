@@ -1,6 +1,10 @@
+using ERP.Core;
 using MediatR;
-using ERP.Core.Behaviors;
 
 namespace ERP.Finance.Application.AccountsPayable.Commands.ApplyDebitMemo;
 
-public record ApplyDebitMemoCommand(Guid DebitMemoId) : IRequestCommand<Unit>;
+public class ApplyDebitMemoCommand : IRequest<Result>
+{
+    public Guid BusinessUnitId { get; set; }
+    public Guid DebitMemoId { get; set; }
+}

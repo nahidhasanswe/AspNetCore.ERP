@@ -17,6 +17,7 @@ public enum POStatus
 
 public class PurchaseOrder : AggregateRoot
 {
+    public Guid BusinessUnitId { get; private set; } // New property
     public Guid VendorId { get; private set; }
     public DateTime OrderDate { get; private set; }
     public POStatus Status { get; private set; }
@@ -28,8 +29,9 @@ public class PurchaseOrder : AggregateRoot
 
     private PurchaseOrder() { }
 
-    public PurchaseOrder(Guid vendorId, DateTime orderDate, IEnumerable<PurchaseOrderLine> lines) : base(Guid.NewGuid())
+    public PurchaseOrder(Guid businessUnitId, Guid vendorId, DateTime orderDate, IEnumerable<PurchaseOrderLine> lines) : base(Guid.NewGuid())
     {
+        BusinessUnitId = businessUnitId; // Set new property
         VendorId = vendorId;
         OrderDate = orderDate;
         Status = POStatus.Open;

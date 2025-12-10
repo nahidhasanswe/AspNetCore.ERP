@@ -2,8 +2,6 @@ using ERP.Core;
 using ERP.Core.Behaviors;
 using ERP.Core.Uow;
 using ERP.Finance.Domain.AccountsPayable.Aggregates;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace ERP.Finance.Application.AccountsPayable.Commands.CreateDebitMemo;
 
@@ -14,7 +12,14 @@ public class CreateDebitMemoCommandHandler(IDebitMemoRepository debitMemoReposit
     {
         using var scope = unitOfWork.Begin();
 
-        var debitMemo = new DebitMemo(command.VendorId, command.BusinessUnitId, command.Amount, command.MemoDate, command.Reason, command.APControlAccountId);
+        var debitMemo = new DebitMemo(
+            command.BusinessUnitId,
+            command.VendorId,
+            command.Amount,
+            command.MemoDate,
+            command.Reason,
+            command.APControlAccountId
+        );
 
         await debitMemoRepository.AddAsync(debitMemo, cancellationToken);
         await scope.SaveChangesAsync(cancellationToken);

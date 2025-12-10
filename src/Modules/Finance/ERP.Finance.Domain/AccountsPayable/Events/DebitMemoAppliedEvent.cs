@@ -6,10 +6,11 @@ namespace ERP.Finance.Domain.AccountsPayable.Events;
 public record DebitMemoAppliedEvent(
     Guid DebitMemoId,
     Guid VendorId,
+    Guid BusinessUnitId, // Added this
     Money Amount,
     DateTime AppliedDate,
     Guid APControlAccountId // The AP Control Account for the vendor
-) : IDomainEvent
+)  : IDomainEvent
 {
     public DateTime OccurredOn { get; } = DateTime.UtcNow;
 }

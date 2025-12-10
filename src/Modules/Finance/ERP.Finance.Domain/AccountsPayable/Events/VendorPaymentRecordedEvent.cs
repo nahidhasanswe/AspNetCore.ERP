@@ -1,5 +1,6 @@
 using ERP.Core.Events;
 using ERP.Finance.Domain.Shared.ValueObjects;
+using System;
 
 namespace ERP.Finance.Domain.AccountsPayable.Events;
 

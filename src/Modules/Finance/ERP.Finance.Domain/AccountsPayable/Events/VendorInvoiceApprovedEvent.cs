@@ -6,7 +6,7 @@ namespace ERP.Finance.Domain.AccountsPayable.Events;
 public record VendorInvoiceApprovedEvent(
     Guid InvoiceId,
     Guid VendorId,
-    Guid BusinessUnitId, // New property
+    Guid BusinessUnitId,
     Money TotalAmount,
     DateTime ApprovalDate,
     Guid APControlAccountId,

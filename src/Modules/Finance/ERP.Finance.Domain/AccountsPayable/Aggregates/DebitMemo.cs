@@ -15,7 +15,7 @@ public enum DebitMemoStatus
 
 public class DebitMemo : AggregateRoot
 {
-    public Guid BusinessUnitId { get; set; }
+    public Guid BusinessUnitId { get; private set; } // New property
     public Guid VendorId { get; private set; }
     public Money Amount { get; private set; }
     public DebitMemoStatus Status { get; private set; }
@@ -25,10 +25,11 @@ public class DebitMemo : AggregateRoot
 
     private DebitMemo() { }
 
-    public DebitMemo(Guid vendorId, Guid businessUnitId, Money amount, DateTime memoDate, string reason, Guid apControlAccountId) : base(Guid.NewGuid())
+    public DebitMemo(Guid businessUnitId, Guid vendorId, Money amount, DateTime memoDate, string reason, Guid apControlAccountId) : base(Guid.NewGuid())
     {
         if (amount.Amount <= 0) throw new ArgumentException("Debit memo amount must be positive.");
         
+        BusinessUnitId = businessUnitId; // Set new property
         VendorId = vendorId;
         Amount = amount;
         MemoDate = memoDate;
@@ -47,6 +48,7 @@ public class DebitMemo : AggregateRoot
         AddDomainEvent(new DebitMemoAppliedEvent(
             Id,
             VendorId,
+            this.BusinessUnitId, // Pass BusinessUnitId
             Amount,
             DateTime.UtcNow,
             APControlAccountId

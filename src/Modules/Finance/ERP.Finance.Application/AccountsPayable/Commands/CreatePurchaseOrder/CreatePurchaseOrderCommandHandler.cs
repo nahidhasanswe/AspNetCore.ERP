@@ -19,7 +19,12 @@ public class CreatePurchaseOrderCommandHandler(IPurchaseOrderRepository poReposi
             new PurchaseOrderLine(dto.ProductId, dto.Description, dto.Quantity, dto.UnitPrice))
             .ToList();
 
-        var purchaseOrder = new PurchaseOrder(command.VendorId, command.OrderDate, poLines);
+        var purchaseOrder = new PurchaseOrder(
+            command.BusinessUnitId,
+            command.VendorId,
+            command.OrderDate,
+            poLines
+        );
 
         await poRepository.AddAsync(purchaseOrder, cancellationToken);
         await scope.SaveChangesAsync(cancellationToken);
