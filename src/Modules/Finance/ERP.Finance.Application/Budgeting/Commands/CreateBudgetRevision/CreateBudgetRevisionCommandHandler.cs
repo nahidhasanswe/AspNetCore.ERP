@@ -2,9 +2,6 @@ using ERP.Core;
 using ERP.Core.Behaviors;
 using ERP.Core.Uow;
 using ERP.Finance.Domain.Budgeting.Aggregates;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace ERP.Finance.Application.Budgeting.Commands.CreateBudgetRevision;
 
 public class CreateBudgetRevisionCommandHandler(IBudgetRepository budgetRepository, IUnitOfWorkManager unitOfWork)
@@ -18,6 +15,11 @@ public class CreateBudgetRevisionCommandHandler(IBudgetRepository budgetReposito
         if (originalBudget == null)
         {
             return Result.Failure<Guid>("Original Budget not found.");
+        }
+
+        if (originalBudget.BusinessUnitId != command.BusinessUnitId)
+        {
+            return Result.Failure<Guid>("Original Budget does not belong to the specified Business Unit.");
         }
 
         var newBudgetRevision = originalBudget.CreateRevision(command.NewNameSuffix);

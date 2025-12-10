@@ -18,6 +18,11 @@ public class CreateBudgetRollForwardCommandHandler(IBudgetRepository budgetRepos
             return Result.Failure<Guid>("Source Budget not found.");
         }
 
+        if (sourceBudget.BusinessUnitId != command.BusinessUnitId)
+        {
+            return Result.Failure<Guid>("Source Budget does not belong to the specified Business Unit.");
+        }
+
         var newBudget = sourceBudget.RollForward(
             command.NewFiscalPeriod,
             command.NewStartDate,
