@@ -14,7 +14,7 @@ public enum OnboardingStatus
     Completed // Vendor created
 }
 
-public class VendorOnboardingRequest : AggregateRoot
+public class VendorOnboardingRequest : AuditableAggregateRoot
 {
     public string ProposedName { get; private set; }
     public string ProposedTaxId { get; private set; }
@@ -26,8 +26,6 @@ public class VendorOnboardingRequest : AggregateRoot
     public OnboardingStatus Status { get; private set; }
     public string RejectionReason { get; private set; }
     public Guid? ApprovedVendorId { get; private set; }
-    
-    public DateTime CreatedDate { get; private set; }
 
     private VendorOnboardingRequest() { }
 
@@ -48,7 +46,7 @@ public class VendorOnboardingRequest : AggregateRoot
         ProposedDefaultCurrency = proposedDefaultCurrency;
         ProposedBankDetails = proposedBankDetails;
         Status = OnboardingStatus.Submitted;
-        CreatedDate = DateTime.UtcNow;
+        CreatedAt = DateTime.UtcNow;
     }
 
     public void SubmitForApproval()
@@ -56,6 +54,7 @@ public class VendorOnboardingRequest : AggregateRoot
         if (Status != OnboardingStatus.Submitted)
             throw new DomainException("Only submitted requests can be sent for approval.");
         Status = OnboardingStatus.PendingApproval;
+        LastModifiedAt = DateTime.UtcNow;
     }
 
     public void Approve(Guid approvedVendorId)
@@ -64,6 +63,7 @@ public class VendorOnboardingRequest : AggregateRoot
             throw new DomainException("Only pending approval requests can be approved.");
         ApprovedVendorId = approvedVendorId;
         Status = OnboardingStatus.Approved;
+        LastModifiedAt = DateTime.UtcNow;
     }
 
     public void Reject(string reason)
@@ -72,6 +72,7 @@ public class VendorOnboardingRequest : AggregateRoot
             throw new DomainException("Only pending approval requests can be rejected.");
         RejectionReason = reason;
         Status = OnboardingStatus.Rejected;
+        LastModifiedAt = DateTime.UtcNow;
     }
 
     public void MarkAsCompleted()
@@ -79,5 +80,6 @@ public class VendorOnboardingRequest : AggregateRoot
         if (Status != OnboardingStatus.Approved)
             throw new DomainException("Only approved requests can be marked as completed.");
         Status = OnboardingStatus.Completed;
+        LastModifiedAt = DateTime.UtcNow;
     }
 }

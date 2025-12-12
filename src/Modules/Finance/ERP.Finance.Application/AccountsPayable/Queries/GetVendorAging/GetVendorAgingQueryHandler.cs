@@ -10,56 +10,27 @@ public class GetVendorAgingQueryHandler(IVendorInvoiceRepository invoiceReposito
 {
     public async Task<Result<IEnumerable<VendorAgingDto>>> Handle(GetVendorAgingQuery request, CancellationToken cancellationToken)
     {
-        var unpaidInvoices = await invoiceRepository.ListAllUnpaidAsync();
+        var unpaidInvoices = await invoiceRepository.ListAllUnpaidAsync(request.AsOfDate, cancellationToken);
         if (!unpaidInvoices.Any())
         {
             return Result.Success(Enumerable.Empty<VendorAgingDto>());
         }
-
-        var today = DateTime.UtcNow.Date;
-
-        var agingData = unpaidInvoices
-            .GroupBy(invoice => invoice.VendorId)
-            .Select(async vendorGroup =>
+        
+        var result = unpaidInvoices
+            .GroupBy(i => new { i.VendorId, i.VendorName })
+            .Select(g => new VendorAgingDto
             {
-                var vendorName = await vendorRepository.GetNameByIdAsync(vendorGroup.Key);
-                var totalDue = vendorGroup.Sum(inv => inv.OutstandingBalance.Amount);
-
-                decimal current = 0;
-                decimal days1_30 = 0;
-                decimal days31_60 = 0;
-                decimal days61_90 = 0;
-                decimal over90 = 0;
-
-                foreach (var invoice in vendorGroup)
-                {
-                    var overdueDays = (today - invoice.DueDate.Date).Days;
-                    var balance = invoice.OutstandingBalance.Amount;
-
-                    if (overdueDays <= 0)
-                        current += balance;
-                    else if (overdueDays <= 30)
-                        days1_30 += balance;
-                    else if (overdueDays <= 60)
-                        days31_60 += balance;
-                    else if (overdueDays <= 90)
-                        days61_90 += balance;
-                    else
-                        over90 += balance;
-                }
-
-                return new VendorAgingDto{
-                    VendorId= vendorGroup.Key,
-                    VendorName = vendorName ?? "Unknown Vendor",
-                    Current = current,
-                    Days1_30 = days1_30,
-                    Days31_60 = days31_60,
-                    Days61_90 = days61_90,
-                    Over90Days = over90
-                };
-            });
-
-        var results = await Task.WhenAll(agingData);
-        return Result.Success(results.AsEnumerable());
+                VendorId = g.Key.VendorId,
+                VendorName = g.Key.VendorName,
+                Current = g.Sum(i => i.DaysOverdue < 0 ? i.OutstandingBalance : 0),
+                Days1_30 = g.Sum(i => i.DaysOverdue >= 0 && i.DaysOverdue <= 30 ? i.OutstandingBalance : 0),
+                Days31_60 = g.Sum(i => i.DaysOverdue > 30 && i.DaysOverdue <= 60 ? i.OutstandingBalance : 0),
+                Days61_90 = g.Sum(i => i.DaysOverdue > 60 && i.DaysOverdue <= 90 ? i.OutstandingBalance : 0),
+                Over90Days = g.Sum(i => i.DaysOverdue > 90 ? i.OutstandingBalance : 0)
+            })
+            .Where(x => x.TotalDue > 0)
+            .AsEnumerable();
+        
+        return Result.Success(result);
     }
 }

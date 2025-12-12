@@ -1,8 +1,6 @@
 using ERP.Core;
-using ERP.Finance.Application.AccountsPayable.DTOs;
 using MediatR;
-using System;
-using System.Collections.Generic;
+using ERP.Finance.Domain.AccountsPayable.DTOs;
 
 namespace ERP.Finance.Application.AccountsPayable.Queries.GetVendorSpendAnalysis;
 

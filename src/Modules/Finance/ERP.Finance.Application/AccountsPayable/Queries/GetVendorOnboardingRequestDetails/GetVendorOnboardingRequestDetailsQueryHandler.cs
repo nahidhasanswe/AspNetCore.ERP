@@ -33,7 +33,7 @@ public class GetVendorOnboardingRequestDetailsQueryHandler(
             onboardingRequest.Status,
             onboardingRequest.RejectionReason,
             onboardingRequest.ApprovedVendorId,
-            onboardingRequest.CreatedDate
+            onboardingRequest.CreatedAt
         );
 
         return Result.Success(dto);

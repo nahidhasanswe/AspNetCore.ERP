@@ -9,13 +9,13 @@ public class ApprovalService(IApprovalRuleRepository ruleRepository) : IApproval
 {
     public async Task<bool> IsApprovalRequired(VendorInvoice invoice)
     {
-        var rules = await ruleRepository.GetApplicableRulesAsync(invoice.TotalAmount.Currency);
+        var rules = await ruleRepository.GetApplicableRulesAsync(invoice.BusinessUnitId);
         return rules.Any(rule => invoice.TotalAmount.Amount > rule.AmountThreshold.Amount);
     }
 
     public async Task<bool> HasSufficientApproval(VendorInvoice invoice, Guid approverId)
     {
-        var rules = await ruleRepository.GetApplicableRulesAsync(invoice.TotalAmount.Currency);
+        var rules = await ruleRepository.GetApplicableRulesAsync(invoice.BusinessUnitId);
         var applicableRules = rules.Where(r => invoice.TotalAmount.Amount > r.AmountThreshold.Amount).ToList();
 
         if (!applicableRules.Any())

@@ -5,5 +5,6 @@ namespace ERP.Finance.Application.AccountsPayable.Queries.CashFlow;
 
 public class GetCashFlowForecastQuery : IRequestCommand<List<PaymentForecastDto>>
 {
+    public Guid BusinessUnitId { get; set; }
     public int DaysAhead { get; set; } = 90;
 }

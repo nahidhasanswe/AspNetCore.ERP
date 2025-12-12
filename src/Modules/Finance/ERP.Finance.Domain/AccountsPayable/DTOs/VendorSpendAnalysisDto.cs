@@ -1,12 +1,10 @@
-using System;
-
-namespace ERP.Finance.Application.AccountsPayable.DTOs;
+namespace ERP.Finance.Domain.AccountsPayable.DTOs;
 
 public record VendorSpendAnalysisDto(
     Guid VendorId,
     string VendorName,
     Guid ExpenseAccountId,
-    string ExpenseAccountName, // Assuming we can get this from somewhere
+    string ExpenseAccountName,
     decimal TotalSpendAmount,
     string Currency
 );

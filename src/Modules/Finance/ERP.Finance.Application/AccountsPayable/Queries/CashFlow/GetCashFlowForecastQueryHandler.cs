@@ -2,15 +2,13 @@ using ERP.Core;
 using ERP.Core.Behaviors;
 using ERP.Finance.Application.AccountsPayable.DTOs;
 using ERP.Finance.Domain.AccountsPayable.Aggregates;
-using ERP.Finance.Domain.AccountsPayable.Service;
 using ERP.Finance.Domain.Shared.Currency;
 
 namespace ERP.Finance.Application.AccountsPayable.Queries.CashFlow;
 
 public class GetCashFlowForecastQueryHandler(
     IVendorInvoiceRepository repository,
-    ICurrencyConversionService currencyConverter,
-    IVendorLookupService vendorLookupService
+    ICurrencyConversionService currencyConverter
     ) : IRequestCommandHandler<GetCashFlowForecastQuery, List<PaymentForecastDto>>
 {
     private const string SystemBaseCurrency = "USD"; 
@@ -19,37 +17,33 @@ public class GetCashFlowForecastQueryHandler(
     {
         var dueDateCutoff = DateTime.Today.AddDays(query.DaysAhead);
 
-        // 1. Fetch Projections (Requires a repository method to get open invoices)
-        // NOTE: In a real system, this would use a highly optimized Read Model (Projection) DB.
-        // We'll assume the repository has a projection method:
-        var projections = await repository.GetForecastProjectionAsync(dueDateCutoff); // Assumed method
+        var projections = await repository.GetForecastProjectionAsync(dueDateCutoff, query.BusinessUnitId, cancellationToken);
 
-        var results = new List<PaymentForecastDto>();
-        
-        // 2. Process and Convert for Accurate Forecasting
-        foreach (var proj in projections)
+        var tasks = projections.Select(async proj =>
         {
-            // Convert outstanding amount to Base Currency for consolidated forecasting
+            // Perform the async operation
             var baseMoney = await currencyConverter.ConvertAsync(
                 source: proj.OutstandingBalance,
                 targetCurrency: SystemBaseCurrency,
-                conversionDate: DateTime.Today // Use today's rate for forecast
+                conversionDate: DateTime.Today
             );
 
-            var vendorName = await vendorLookupService.GetVendorNameAsync(proj.VendorId);
-
-            results.Add(new PaymentForecastDto
+            // Return the constructed DTO
+            return new PaymentForecastDto
             {
                 InvoiceId = proj.Id,
                 VendorId = proj.VendorId,
-                VendorName = vendorName,
+                VendorName = proj.VendorName,
                 DueDate = proj.DueDate,
                 OutstandingAmount = proj.OutstandingBalance.Amount,
                 Currency = proj.OutstandingBalance.Currency,
                 AmountInBaseCurrency = baseMoney.Amount
-            });
-        }
-
-        return Result.Success(results.OrderBy(r => r.DueDate).ToList());
+            };
+        });
+        
+        // Await all tasks to complete concurrently
+        var resultsArray = await Task.WhenAll(tasks);
+        
+        return Result.Success(resultsArray.ToList());
     }
 }

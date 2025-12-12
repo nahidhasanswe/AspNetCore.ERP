@@ -9,4 +9,9 @@ public class VendorLookupService(IVendorRepository repository) : IVendorLookupSe
     {
         return repository.GetNameByIdAsync(vendorId);
     }
+
+    public Task<Dictionary<Guid, string>> GetVendorNamesAsync(IEnumerable<Guid> vendorIds)
+    {
+        throw new NotImplementedException();
+    }
 }

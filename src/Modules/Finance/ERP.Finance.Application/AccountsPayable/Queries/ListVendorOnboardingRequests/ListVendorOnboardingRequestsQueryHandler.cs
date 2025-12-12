@@ -15,7 +15,15 @@ public class ListVendorOnboardingRequestsQueryHandler(
     public async Task<Result<IEnumerable<VendorOnboardingRequestSummaryDto>>> Handle(ListVendorOnboardingRequestsQuery request, CancellationToken cancellationToken)
     {
         var filteredRequests = await onboardingRepository.GetAllAsync(request.Status, cancellationToken);
-        var summaryDtos = mapper.Map<List<VendorOnboardingRequestSummaryDto>>(filteredRequests);
+
+        var summaryDtos = filteredRequests.Select(x => new VendorOnboardingRequestSummaryDto
+        (
+            x.Id,
+            x.ProposedName,
+            x.ProposedTaxId,
+            x.Status,
+            x.CreatedAt
+        )).ToList();
 
         return Result.Success(summaryDtos.AsEnumerable());
     }

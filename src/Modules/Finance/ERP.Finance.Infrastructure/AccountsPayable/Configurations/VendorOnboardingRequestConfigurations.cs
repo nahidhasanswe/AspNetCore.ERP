@@ -17,7 +17,7 @@ public class VendorOnboardingRequestConfigurations : IEntityTypeConfiguration<Ve
         builder.Property(vor => vor.ProposedDefaultCurrency).HasMaxLength(3);
         builder.Property(vor => vor.RejectionReason).HasMaxLength(1000);
         builder.Property(vor => vor.ApprovedVendorId);
-        builder.Property(vor => vor.CreatedDate).IsRequired();
+        builder.Property(vor => vor.CreatedAt).IsRequired();
 
         builder.OwnsOne(vor => vor.ProposedAddress, address =>
         {

@@ -6,5 +6,5 @@ namespace ERP.Finance.Domain.AccountsPayable.Aggregates;
 
 public interface IApprovalRuleRepository : IRepository<ApprovalRule>
 {
-    Task<IEnumerable<ApprovalRule>> GetApplicableRulesAsync(string currency);
+    Task<IEnumerable<ApprovalRule>> GetApplicableRulesAsync(Guid? businessUnitId, CancellationToken cancellationToken = default);
 }

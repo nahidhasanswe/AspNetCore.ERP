@@ -8,5 +8,6 @@ namespace ERP.Finance.Application.AccountsPayable.Queries.GetCashRequirements;
 
 public class GetCashRequirementsQuery : IRequest<Result<IEnumerable<CashRequirementDto>>>
 {
+    public Guid BusinessUnitId { get; set; }
     public DateTime DueDateCutoff { get; set; }
 }
